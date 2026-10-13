@@ -33,14 +33,25 @@ enum PreviewWindowCatalog {
         axWindows: [PreviewWindowInfo]
     ) -> PreviewWindowInfo {
         guard let state = matchingAccessibilityWindow(for: window, in: axWindows) else { return window }
+        return applyingAccessibilityState(to: window, from: state)
+    }
+
+    private static func applyingAccessibilityState(
+        to window: PreviewWindowInfo,
+        from state: PreviewWindowInfo
+    ) -> PreviewWindowInfo {
+        let needsTitle = normalizedTitle(window.title).isEmpty
+            || normalizedTitle(window.title) == normalizedTitle(window.appName)
         return PreviewWindowInfo(
             id: window.id, windowID: window.windowID, processIdentifier: window.processIdentifier,
-            appName: window.appName, title: window.title, frame: window.frame,
+            appName: window.appName,
+            title: needsTitle && !normalizedTitle(state.title).isEmpty ? state.title : window.title,
+            frame: window.frame,
             isMinimized: window.isMinimized,
             isApplicationHidden: state.isApplicationHidden ?? window.isApplicationHidden,
             isFullScreen: state.isFullScreen,
             staticPreviewImage: window.staticPreviewImage, placeholderText: window.placeholderText,
-            accessibilityReference: window.accessibilityReference
+            accessibilityReference: window.accessibilityReference ?? state.accessibilityReference
         )
     }
 
@@ -111,6 +122,7 @@ enum PreviewWindowCatalog {
     ) -> [PreviewCaptureWindowCandidate] {
         var unmatchedAXWindows = axWindows.filter { !$0.isMinimized }
         var acceptedCandidateIDs = Set<String>()
+        var matchedAccessibilityWindows: [String: PreviewWindowInfo] = [:]
 
         for candidate in candidates where candidate.isOnScreen {
             acceptedCandidateIDs.insert(candidate.info.id)
@@ -120,20 +132,31 @@ enum PreviewWindowCatalog {
         consumeExactWindowIDMatches(
             candidates: candidates,
             acceptedCandidateIDs: &acceptedCandidateIDs,
+            matchedAccessibilityWindows: &matchedAccessibilityWindows,
             unmatchedAXWindows: &unmatchedAXWindows
         )
         consumeUniqueTitleAndFrameMatches(
             candidates: candidates,
             acceptedCandidateIDs: &acceptedCandidateIDs,
+            matchedAccessibilityWindows: &matchedAccessibilityWindows,
             unmatchedAXWindows: &unmatchedAXWindows
         )
         consumeUniqueFrameMatches(
             candidates: candidates,
             acceptedCandidateIDs: &acceptedCandidateIDs,
+            matchedAccessibilityWindows: &matchedAccessibilityWindows,
             unmatchedAXWindows: &unmatchedAXWindows
         )
 
-        return candidates.filter { acceptedCandidateIDs.contains($0.info.id) }
+        return candidates.filter { acceptedCandidateIDs.contains($0.info.id) }.map { candidate in
+            // Keep the one-to-one match already established above. WindowServer
+            // omits titles without recording permission, including unnumbered AX windows.
+            guard let state = matchedAccessibilityWindows[candidate.info.id] else { return candidate }
+            return PreviewCaptureWindowCandidate(
+                info: applyingAccessibilityState(to: candidate.info, from: state),
+                isOnScreen: candidate.isOnScreen
+            )
+        }
     }
 
     private static func independentIdentity(for window: PreviewWindowInfo) -> IndependentWindowIdentity {
@@ -172,6 +195,7 @@ enum PreviewWindowCatalog {
     private static func consumeExactWindowIDMatches(
         candidates: [PreviewCaptureWindowCandidate],
         acceptedCandidateIDs: inout Set<String>,
+        matchedAccessibilityWindows: inout [String: PreviewWindowInfo],
         unmatchedAXWindows: inout [PreviewWindowInfo]
     ) {
         for candidate in candidates where !candidate.isOnScreen && !acceptedCandidateIDs.contains(candidate.info.id) {
@@ -185,6 +209,7 @@ enum PreviewWindowCatalog {
                 continue
             }
             acceptedCandidateIDs.insert(candidate.info.id)
+            matchedAccessibilityWindows[candidate.info.id] = unmatchedAXWindows[index]
             unmatchedAXWindows.remove(at: index)
         }
     }
@@ -192,6 +217,7 @@ enum PreviewWindowCatalog {
     private static func consumeUniqueTitleAndFrameMatches(
         candidates: [PreviewCaptureWindowCandidate],
         acceptedCandidateIDs: inout Set<String>,
+        matchedAccessibilityWindows: inout [String: PreviewWindowInfo],
         unmatchedAXWindows: inout [PreviewWindowInfo]
     ) {
         for candidate in candidates where !candidate.isOnScreen && !acceptedCandidateIDs.contains(candidate.info.id) {
@@ -218,6 +244,7 @@ enum PreviewWindowCatalog {
             }
 
             acceptedCandidateIDs.insert(candidate.info.id)
+            matchedAccessibilityWindows[candidate.info.id] = unmatchedAXWindows[index]
             unmatchedAXWindows.remove(at: index)
         }
     }
@@ -225,6 +252,7 @@ enum PreviewWindowCatalog {
     private static func consumeUniqueFrameMatches(
         candidates: [PreviewCaptureWindowCandidate],
         acceptedCandidateIDs: inout Set<String>,
+        matchedAccessibilityWindows: inout [String: PreviewWindowInfo],
         unmatchedAXWindows: inout [PreviewWindowInfo]
     ) {
         for candidate in candidates where !candidate.isOnScreen && !acceptedCandidateIDs.contains(candidate.info.id) {
@@ -244,6 +272,7 @@ enum PreviewWindowCatalog {
             }
 
             acceptedCandidateIDs.insert(candidate.info.id)
+            matchedAccessibilityWindows[candidate.info.id] = unmatchedAXWindows[index]
             unmatchedAXWindows.remove(at: index)
         }
     }

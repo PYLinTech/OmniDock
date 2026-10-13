@@ -4,6 +4,112 @@ import XCTest
 
 @MainActor
 final class WindowCycleTests: XCTestCase {
+    func testMinimizeReadRetriesAreBoundedAndDisablingCancelsPendingWork() async {
+        let pid = pid_t.max
+        let original = window(id: 1, processIdentifier: pid)
+        var fails = false
+        var failedReads = 0
+        let exhausted = expectation(description: "Initial read and three retries")
+        let inventory = WindowInventoryService(
+            accessibilityWindowsProvider: { processIdentifier, _ in
+                guard processIdentifier == pid else { return [] }
+                if fails {
+                    failedReads += 1
+                    if failedReads == 4 { exhausted.fulfill() }
+                    return nil
+                }
+                return [original]
+            }, windowServerWindowsProvider: { [:] }
+        )
+        let settings = configuredSettings()
+        let registry = TestHotkeyRegistry()
+        let input = TestWindowCycleInputMonitor()
+        let panel = PreviewPanelController(
+            requestWindowFocus: { _, _ in XCTFail("A retry must not focus a window") },
+            requestWindowClose: { _, _, _, _ in }
+        )
+        let service = makeService(
+            settings: settings, registry: registry, panel: panel, inventory: inventory, inputMonitor: input,
+            permissions: { PermissionSnapshot(accessibility: true, screenRecording: false, inputMonitoring: true) }
+        )
+        service.start()
+        defer { service.stop(); inventory.stop(); panel.hide() }
+        await drainMainQueue()
+        seedWindows([original], in: inventory)
+        let initial = expectation(description: "Initial reconciliation complete")
+        let observer = inventory.observeChanges { event in
+            if case let .seed(processIdentifier, _, _) = event, processIdentifier == pid { initial.fulfill() }
+        }
+        registry.onTrigger?(.forward)
+        await fulfillment(of: [initial], timeout: 1)
+        inventory.removeChangeObserver(observer)
+        fails = true
+        inventory.invalidate(processIdentifier: pid, reason: .minimized)
+        await fulfillment(of: [exhausted], timeout: 2)
+        let settled = expectation(description: "No additional retry after exhaustion")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { settled.fulfill() }
+        await fulfillment(of: [settled], timeout: 1)
+        XCTAssertEqual(failedReads, 4)
+        XCTAssertEqual(panel.displayedWindowCount, 1)
+
+        inventory.invalidate(processIdentifier: pid, reason: .restored)
+        await drainMainQueue()
+        XCTAssertEqual(failedReads, 5)
+        settings.windowCycleEnabled = false
+        let cancelled = expectation(description: "Queued retry cancelled")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { cancelled.fulfill() }
+        await fulfillment(of: [cancelled], timeout: 1)
+        XCTAssertEqual(failedReads, 5)
+        XCTAssertFalse(service.isInputMonitoring)
+        XCTAssertNil(panel.frame)
+    }
+
+    func testStartupRetriesAnInvalidatedApplicationWithoutChangingTheSelectedWindow() async {
+        let pid = pid_t.max
+        let documents = (1...6).map { window(id: CGWindowID($0), processIdentifier: pid, originX: CGFloat($0 * 100)) }
+        let other = window(id: 100, processIdentifier: pid - 1)
+        var readsAfterInvalidation = 0
+        var isMinimizing = false
+        let recovered = expectation(description: "Transient application read recovered in the same session")
+        let inventory = WindowInventoryService(
+            accessibilityWindowsProvider: { processIdentifier, _ in
+                if processIdentifier == other.processIdentifier { return [other] }
+                guard processIdentifier == pid else { return [] }
+                if isMinimizing {
+                    readsAfterInvalidation += 1
+                    if readsAfterInvalidation == 1 { return nil }
+                    if readsAfterInvalidation == 2 { recovered.fulfill() }
+                }
+                return documents
+            }, windowServerWindowsProvider: { [:] }
+        )
+        let registry = TestHotkeyRegistry()
+        let input = TestWindowCycleInputMonitor()
+        var focused: CGWindowID?
+        let panel = PreviewPanelController(requestWindowFocus: { window, completion in
+            focused = window.windowID
+            completion(.focused)
+        }, requestWindowClose: { _, _, _, _ in })
+        let service = makeService(
+            settings: configuredSettings(), registry: registry, panel: panel, inventory: inventory,
+            inputMonitor: input,
+            permissions: { PermissionSnapshot(accessibility: true, screenRecording: false, inputMonitoring: true) }
+        )
+        service.start()
+        defer { service.stop(); inventory.stop(); panel.hide() }
+        await drainMainQueue()
+        seedWindows(documents + [other], in: inventory)
+        isMinimizing = true
+        inventory.invalidate(processIdentifier: pid, reason: .minimized)
+        registry.onTrigger?(.forward)
+        XCTAssertEqual(panel.displayedWindowCount, 1)
+        await fulfillment(of: [recovered], timeout: 2)
+        await drainMainQueue()
+        XCTAssertEqual(panel.displayedWindowCount, 7)
+        input.onEvent?(.confirm)
+        XCTAssertEqual(focused, 100, "Adding recovered windows must not move the selection")
+    }
+
     func testTitleChangeWithUnnumberedAXWindowPreservesSelectedWindowForConfirmation() async {
         _ = NSApplication.shared
         let pid = pid_t.max

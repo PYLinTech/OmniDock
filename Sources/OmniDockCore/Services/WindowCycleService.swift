@@ -429,6 +429,8 @@ private let windowCycleEventTapCallback: CGEventTapCallBack = { _, type, event, 
 @MainActor
 final class WindowCycleService {
     private static let initialReconciliationDelay: TimeInterval = 0.12
+    private static let reconciliationRetryDelay: TimeInterval = 0.25
+    nonisolated private static let maximumReconciliationRetries = 3
 
     private let settings: SettingsStore
     private let permissionSnapshotProvider: () -> PermissionSnapshot
@@ -468,7 +470,7 @@ final class WindowCycleService {
     private var inventoryChangeObserverIdentifier: UUID?
     private var inventoryPrewarmWorkItem: DispatchWorkItem?
     private var processRefreshWorkItem: DispatchWorkItem?
-    private var pendingProcessRefreshes = Set<pid_t>()
+    private var pendingProcessRefreshes: [pid_t: Int] = [:]
     private var hasPrewarmedInventory = false
     private var isAwaitingInventory = false
     private var isStarted = false
@@ -764,14 +766,16 @@ final class WindowCycleService {
         direction: WindowCycleDirection,
         refreshGeneration: UInt64,
         startsSessionWhenReady: Bool,
-        delay: TimeInterval = 0
+        delay: TimeInterval = 0,
+        remainingRetries: Int = maximumReconciliationRetries
     ) {
         if delay > 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 self?.runInventoryReconciliation(
                     direction: direction,
                     refreshGeneration: refreshGeneration,
-                    startsSessionWhenReady: startsSessionWhenReady
+                    startsSessionWhenReady: startsSessionWhenReady,
+                    remainingRetries: remainingRetries
                 )
             }
         } else {
@@ -779,7 +783,8 @@ final class WindowCycleService {
                 self?.runInventoryReconciliation(
                     direction: direction,
                     refreshGeneration: refreshGeneration,
-                    startsSessionWhenReady: startsSessionWhenReady
+                    startsSessionWhenReady: startsSessionWhenReady,
+                    remainingRetries: remainingRetries
                 )
             }
         }
@@ -788,7 +793,8 @@ final class WindowCycleService {
     private func runInventoryReconciliation(
         direction: WindowCycleDirection,
         refreshGeneration: UInt64,
-        startsSessionWhenReady: Bool
+        startsSessionWhenReady: Bool,
+        remainingRetries: Int
     ) {
         guard refreshGeneration == inventoryRefreshGeneration,
               hotkeyRegistry.isRegistered
@@ -796,13 +802,31 @@ final class WindowCycleService {
             return
         }
 
-        let records = windowInventory.reconcileSwitcherWindows()
+        var failedProcesses = Set<pid_t>()
+        var records = windowInventory.reconcileSwitcherWindows { failedProcesses.insert($0) }
         guard refreshGeneration == inventoryRefreshGeneration else {
             return
         }
 
+        if let session {
+            // Failed AX reads are unknown, not proof that all of an app's windows closed.
+            let knownIdentities = Set(records.map(\.identity))
+            records += session.windows.enumerated().compactMap { index, window in
+                failedProcesses.contains(window.processIdentifier)
+                    && !knownIdentities.contains(PreviewWindowIdentity(window))
+                    ? WindowInventoryRecord(window, displayOrder: index) : nil
+            }
+        }
+
         if startsSessionWhenReady {
             guard session == nil else {
+                return
+            }
+            if records.isEmpty, !failedProcesses.isEmpty, remainingRetries > 0 {
+                scheduleInventoryReconciliation(
+                    direction: direction, refreshGeneration: refreshGeneration, startsSessionWhenReady: true,
+                    delay: Self.reconciliationRetryDelay, remainingRetries: remainingRetries - 1
+                )
                 return
             }
             isAwaitingInventory = false
@@ -810,10 +834,12 @@ final class WindowCycleService {
                 endSession()
                 return
             }
-            return
+        } else {
+            applyReconciledWindows(records)
         }
-
-        applyReconciledWindows(records)
+        for processIdentifier in failedProcesses {
+            scheduleProcessRefresh(processIdentifier, retryAttempt: 1)
+        }
     }
 
     private func applyReconciledWindows(_ records: [WindowInventoryRecord]) {
@@ -1180,39 +1206,53 @@ final class WindowCycleService {
             removeApplication(processIdentifier)
             scheduleProcessRefresh(processIdentifier)
         case let .processTerminated(processIdentifier):
-            pendingProcessRefreshes.remove(processIdentifier)
+            pendingProcessRefreshes.removeValue(forKey: processIdentifier)
             removeApplication(processIdentifier)
         case let .processInvalidated(processIdentifier, reason)
-            where reason == .created || reason == .destroyed || reason == .titleChanged:
+            where reason == .created || reason == .destroyed || reason == .titleChanged
+                || reason == .minimized || reason == .restored:
             scheduleProcessRefresh(processIdentifier)
         case .seed, .processInvalidated, .processActivated, .windowFocused, .activeSpaceChanged, .displayConfigurationChanged:
             break
         }
     }
 
-    private func scheduleProcessRefresh(_ processIdentifier: pid_t) {
+    private func scheduleProcessRefresh(_ processIdentifier: pid_t, retryAttempt: Int = 0) {
         guard session != nil, canRun else { return }
-        pendingProcessRefreshes.insert(processIdentifier)
+        pendingProcessRefreshes[processIdentifier] = min(
+            pendingProcessRefreshes[processIdentifier] ?? retryAttempt, retryAttempt
+        )
+        if retryAttempt == 0 {
+            processRefreshWorkItem?.cancel()
+            processRefreshWorkItem = nil
+        }
         guard processRefreshWorkItem == nil else { return }
         let generation = inventoryRefreshGeneration
         let workItem = DispatchWorkItem { [weak self] in
             guard let self, generation == self.inventoryRefreshGeneration else { return }
             self.processRefreshWorkItem = nil
-            let processIdentifiers = self.pendingProcessRefreshes.sorted()
+            let attempts = self.pendingProcessRefreshes
             self.pendingProcessRefreshes.removeAll()
             guard self.canRun, self.session != nil else { return }
-            self.refreshProcesses(processIdentifiers)
+            self.refreshProcesses(attempts)
         }
         processRefreshWorkItem = workItem
-        DispatchQueue.main.async(execute: workItem)
+        if retryAttempt > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.reconciliationRetryDelay, execute: workItem)
+        } else {
+            DispatchQueue.main.async(execute: workItem)
+        }
     }
 
-    private func refreshProcesses(_ processIdentifiers: [pid_t]) {
+    private func refreshProcesses(_ attempts: [pid_t: Int]) {
         guard let session else { return }
+        let processIdentifiers = attempts.keys.sorted()
         var replacements: [pid_t: [WindowInventoryRecord]] = [:]
         for processIdentifier in processIdentifiers {
             if let records = windowInventory.reconcileWindows(for: processIdentifier) {
                 replacements[processIdentifier] = records
+            } else if let attempt = attempts[processIdentifier], attempt < Self.maximumReconciliationRetries {
+                scheduleProcessRefresh(processIdentifier, retryAttempt: attempt + 1)
             }
         }
         guard !replacements.isEmpty else { return }

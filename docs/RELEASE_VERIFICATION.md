@@ -1110,3 +1110,202 @@ has passed on three machines and fails on a fourth is worth being able to see.
 - Logs, fingerprints, rollback paths and screenshots are in the ignored
   `.private/local-builds/20260929-minimized-identity/acceptance.md`. This fix is
   uncommitted; no push, version bump, notarization or release was performed.
+
+### 2026-10-12 · released 1.2.10 and targeted preview corrections
+
+- Started from released `1.2.10` / build `20`, commit `8ab4b03`, on macOS
+  26.6.2. The macOS 15.6.1 guest completed the real in-app update from `1.2.9`
+  to `1.2.10`, including replacement, automatic restart and strict signature
+  verification. All five existing permission grants were retained. The earlier
+  minimized-identity correction is published as `a8e7a13`, not an outstanding
+  implementation task.
+- **Host formal-build checks passed:** independent selection of two same-title
+  documents through Option-Tab, exact restoration of minimized A while B was
+  open, Dock hide/show, and exact Dock/Command-Tab card focus. Foreground process
+  and AXDocument were checked separately from panel dismissal; releasing Command
+  preserved the selected window.
+- **Guest formal-build checks passed:** enabled Option-Tab multi-row navigation,
+  navigation into a short final row, Return confirmation, Escape cancellation,
+  exact minimized same-title restoration, and Dock hide/show. These are specific
+  cases, not completion of every F/H/K matrix row.
+- Revoked Screen Recording and Input Monitoring separately through guest System
+  Settings, honoring each system-required Quit & Reopen. Without recording,
+  metadata-only cards remained available; without input monitoring, Option-Tab
+  was unavailable. Turning Option-Tab off while unauthorized remained off after
+  regrant and restart. Restored both grants and the original feature switches.
+  Accessibility revocation and the complete P1-P6 cross-product remain untested.
+- **Reproduced a formal-build inventory race:** minimizing a document and
+  immediately opening Option-Tab could omit all six windows of that application.
+  In a controlled comparison, the formal build omitted them in two of three
+  attempts; the candidate included all six in three of three. An earlier series
+  reproduced three omissions, while waiting one second before invocation
+  recovered the list. A separate raw AX probe did not reproduce a failed read,
+  so the UI failure is confirmed without claiming that every omission was
+  directly traced to an observed AX error.
+- The candidate refreshes inventory on minimized/restored events and retries
+  failed per-process reads at most three times, 250 ms apart. Existing cards and
+  selection survive unknown reads; confirmed empty lists still remove windows.
+  Real structural events preempt queued retry delays, and session cancellation
+  invalidates pending work. No continuous polling or broader identity fallback
+  was added.
+- **Reproduced and corrected metadata-only titles:** the formal build showed
+  application names for visible documents despite valid AX titles. The candidate
+  preserves the already-established one-to-one AX match and uses its title only
+  when the surface title is empty or an application-name placeholder. Candidate
+  guest screenshots and AX reads confirmed all six document titles with no
+  thumbnails after recording was revoked. Regrant restored normal capture; a
+  subsequent Dock card click focused the exact document. One metadata-only
+  keyboard confirmation probe did not establish a focus pass and remains open.
+- Added three regressions for title/identity preservation, same-session recovery
+  without moving selection, bounded retries and cancellation. **861 tests passed**;
+  strict SwiftPM and Xcode arm64 Release builds, staged bundle/resource checks,
+  strict nested signing and diff checks passed. The existing App Intents metadata
+  extraction warning is unrelated to compiler warnings. Candidate archive hashes
+  matched across host and guest. No new Universal 2 build or notarization is
+  claimed for this local candidate.
+- **Physical displays:** unplugged and reconnected the external U32J59x. A fresh
+  Option-Tab panel fit the remaining internal display and later the restored
+  external display. Active-interaction hot-plug cancellation was not established:
+  the held interaction had been released before reconnection. This narrows S3
+  geometry coverage but does not close D1-D6 or side-Dock/full-screen cases.
+- **Physical sleep:** the first attempt established display sleep only and logged
+  a 30-second virtualization sleep-notification timeout. After safely suspending
+  the guest, system logs confirmed sleep at 06:51:31 PDT, DarkWake at 06:52:04
+  and full user wake at 06:52:35. The old Option-Tab panel was gone; releasing
+  Option did not change the foreground app. A later invocation displayed a fresh
+  panel within current screen bounds. The first one-second post-wake observation
+  had no panel, so first-invocation latency is not accepted. This does not close
+  the three-entry sleep matrix, overlapping interruptions or repeated cycles.
+- The host remains on the formal release; the signed arm64 candidate is installed
+  in the guest. The guest was resumed with the same app process, its original
+  preview switches restored, all five grants enabled, and one Finder extension
+  registered at the installed path. Only owned test documents were closed;
+  modifiers were released and the temporary transfer server stopped.
+- Detailed logs, fingerprints, rollback locations and screenshots are under the
+  ignored `.private/acceptance-20261012/` directory. These two corrections remain
+  uncommitted; no push, version bump or release was performed.
+
+### 2026-10-12 · installed candidate and metadata focus follow-up
+
+- Rebuilt and replaced the host installation, then installed the identical
+  Developer ID signed arm64 candidate in the macOS 15.6.1 guest. Both remain
+  version `1.2.10`, build `20`. Main executable SHA-256 on both systems:
+  `36b33492cbe6aef93e8b6673a906a345615488aad08f6f76fd781a54b1c02bc7`.
+  The preceding formal host installation has a rollback archive. No version
+  change, commit, push, notarization or release was performed.
+- The first host candidate included all six test windows in three consecutive
+  immediate-minimize/Option-Tab trials. Direct AX objects confirmed that only A
+  was minimized and its same-title sibling B remained normal. Earlier
+  same-title AppleScript window specifiers could affect both siblings; those
+  earlier runs establish list omissions, not an A-only minimized setup.
+- **Found and fixed a metadata-only focus failure:** after guest recording
+  revocation and the required restart, arrow navigation selected the intended
+  document but Return and card clicks did not focus it. The merged surface kept
+  the document title but discarded its established AX reference. Preserve that
+  reference when the surface has none, keeping the existing process-instance
+  and live-reference checks. Matching rules and stale-reference rejection are
+  unchanged. The new reference assertions failed before the fix for both
+  numbered and unnumbered AX records, then passed.
+- **Final guest candidate, without recording:** Option-Tab Right/Return focused
+  document E, a Dock card focused document D, and an enhanced Command-Tab card
+  focused document C. Each result was verified by exact AXDocument, focused
+  AXUIElement and foreground process; cards contained no thumbnails. Keyboard
+  input carried explicit Option flags. An earlier script omitted those flags
+  from arrow events and is not evidence of broken navigation.
+- **Permission boundary still failing:** with Accessibility granted but both
+  recording and input monitoring revoked, Dock metadata navigation and exact
+  selection passed, and Option-Tab correctly remained unavailable. Enhanced
+  Command-Tab showed only the native system switcher in two attempts, contrary
+  to P1's expected metadata panel. This remains an open failure, not a passed
+  permission matrix. Regranting input monitoring and recording, with the
+  required restarts, restored enhanced Command-Tab cards and image previews.
+- Revoking Accessibility in the guest stopped Dock previews and showed the
+  missing-permission state without changing saved preview choices. All five
+  grants were restored. Original preview switches read back as
+  `{1,1,0,1,0,0}` and live count remained three. The host's privacy grants were
+  not changed. Each system lists one enabled Finder extension at the installed
+  app path.
+- **861 tests passed with compiler warnings treated as errors** after the
+  reference fix. Strict SwiftPM and Xcode arm64 Release builds, generated-project consistency, staged
+  bundle validation and strict nested/all-architecture signature checks passed.
+  These local arm64 checks are not Universal 2 or notarization acceptance.
+- The final host exact-focus rerun is not accepted: the disposable text editor
+  later exposed application-role nodes rather than usable AXWindow nodes to
+  both System Events and an independent AX probe. Earlier host interaction
+  results must not be relabeled as final-candidate coverage. No workaround or
+  weakened window matching was added for this test-environment observation.
+- Active-preview physical hot-plug cancellation and first post-sleep response
+  still need a coordinated physical rerun. No additional display disconnect or
+  system sleep was performed in this continuation. Broader F/H/K, P1-P6, D1-D6
+  and I1-I7 matrices remain open where not explicitly covered above.
+
+### 2026-10-12 · physical interruption follow-up
+
+- Tested the installed final candidate above without further runtime changes.
+  Its executable hash and strict nested-code signature verification still match.
+- **External-display disconnect:** the old Option-Tab panel was absent at the
+  0.6-second post-change sample. A fresh panel appeared in 0.213 seconds within
+  the remaining built-in display. The foreground application changed during
+  this trial, and continuous pre-disconnect visibility was not recorded, so it
+  does not establish the full active-interaction/no-unintended-focus case.
+- **External-display reconnect:** the panel remained visible throughout the
+  observation before the physical connection. It was absent 0.6 seconds after
+  the change, and the foreground process remained unchanged before and after
+  releasing Option. The first fresh panel appeared in 0.277 seconds within the
+  external display. This accepts one active Option-Tab reconnect case, not all
+  three preview entry points or the full D1-D6 matrix.
+- **Real system sleep:** power-management logs record software sleep at
+  19:07:16 PDT, a maintenance wake/sleep cycle, and full wake at 19:08:54. The
+  old panel was absent on wake. The immediate automated request produced no
+  panel within five seconds; the probe did not yet distinguish a locked desktop
+  from an interactive session, and the foreground application changed across
+  wake. Those observations do not establish a product latency/focus failure or
+  a passed first-unlock response. After the desktop was interactive, a fresh
+  request produced a correctly positioned panel in 0.234 seconds.
+- Timing above measures on-screen panel appearance and includes input dispatch;
+  it is not a measurement of every thumbnail's first complete frame. A further
+  sleep trial must wait for both wake and an unlocked active desktop before
+  measuring the first request. That follow-up is recorded below.
+- The guest was safely suspended before host sleep and resumed afterward with
+  the same OmniDock process and matching executable hash. Both displays are
+  restored, modifiers are released, and temporary input observers have exited.
+  No privacy grant, feature preference, version, commit or release was changed
+  during these physical checks. OD-03-R2 and the other explicitly untested
+  interaction/permission cases remain open.
+
+### 2026-10-12 · first unlocked-desktop response
+
+- Retested the same installed candidate after safely suspending the guest.
+  Power-management logs confirm software sleep at 20:32:30 PDT, DarkWake at
+  20:32:39 and full wake at 20:33:14.
+- On the wake notification, the old Option-Tab panel was absent and the
+  foreground process was the login window; the desktop-readiness check was
+  false. The probe did not attempt a new preview while the desktop was locked.
+  About 3.2 seconds later, the on-console session was unlocked and the original
+  foreground application had returned. The old panel remained absent, and
+  releasing Option did not change the foreground application.
+- **The first fresh request after unlocking displayed a panel in 0.212 seconds**
+  including 0.134 seconds of input dispatch, positioned inside the external
+  display. This accepts one Option-Tab sleep/unlock/first-request trial. It does
+  not measure complete thumbnail rendering or close the three-entry, repeated,
+  overlapping-interruption and user-session-switch matrices. The earlier
+  unguarded five-second observation remains inconclusive, not a confirmed
+  product failure.
+- The guest resumed with its existing process, and both installed executables
+  still match the final candidate hash above. Modifier flags are clear and no
+  temporary observer remains. No runtime code, privacy grants or preferences
+  changed; this follow-up only updates acceptance records.
+
+### 2026-10-12 · local checkpoint verification
+
+- Rechecked the complete pending code and regression-test changes before the
+  local checkpoint: **861 tests passed with compiler warnings treated as
+  errors**. Strict SwiftPM build, generated Xcode project consistency, staged
+  app/resource/ad-hoc signature validation and whitespace checks passed again.
+  Staging did not replace or launch either installed application.
+- This checkpoint contains inventory recovery, metadata title/reference
+  preservation, their regressions and the acceptance evidence above. Private
+  diagnostics, captures, test helpers and build artifacts are excluded.
+- No push, version change, notarization or release is part of this checkpoint.
+  The macOS 15 input-monitoring-denial case and explicitly untested portions of
+  the interaction matrices remain open; this is not full release acceptance.

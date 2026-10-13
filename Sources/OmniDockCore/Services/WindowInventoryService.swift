@@ -1042,7 +1042,7 @@ final class WindowInventoryService {
     // This is an on-demand public API reconciliation for the independent window
     // switcher. AX establishes that a window is still interactive; WindowServer
     // metadata only supplements stable IDs and geometry. It never starts capture.
-    func reconcileSwitcherWindows() -> [WindowInventoryRecord] {
+    func reconcileSwitcherWindows(onReadFailure: (pid_t) -> Void = { _ in }) -> [WindowInventoryRecord] {
         let windowServerWindows = windowServerWindowsByProcess()
         let runningApplications = NSWorkspace.shared.runningApplications.filter { application in
             application.activationPolicy == .regular && !application.isTerminated
@@ -1052,10 +1052,13 @@ final class WindowInventoryService {
             .union(state.processIdentifiers)
 
         for processIdentifier in processIdentifiers {
-            _ = reconcileWindows(
+            if reconcileWindows(
                 for: processIdentifier,
                 windowServerWindows: windowServerWindows[processIdentifier, default: []]
-            )
+            ) == nil, !windowServerWindows[processIdentifier, default: []].isEmpty
+                || !state.records(for: processIdentifier).isEmpty {
+                onReadFailure(processIdentifier)
+            }
         }
         return allWindows()
     }

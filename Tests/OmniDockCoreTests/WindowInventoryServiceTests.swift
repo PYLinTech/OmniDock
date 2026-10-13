@@ -4,6 +4,41 @@ import XCTest
 @testable import OmniDockCore
 
 final class WindowInventoryStateTests: XCTestCase {
+    func testMetadataOnlySwitcherKeepsDocumentTitlesAndExactReferencesWithoutChangingSurfaceIdentity() {
+        for hasWindowNumbers in [true, false] {
+            let documents: [PreviewWindowInfo] = (1...6).map { index in
+                let number: CGWindowID? = hasWindowNumbers ? CGWindowID(index) : nil
+                let title = index <= 2 ? "Same.txt" : "Document \(index).txt"
+                let frame = CGRect(x: CGFloat(index * 100), y: 20, width: 800, height: 600)
+                return PreviewWindowInfo(
+                    id: "ax-\(index)", windowID: number,
+                    processIdentifier: 101, appName: "Editor",
+                    title: title, frame: frame,
+                    isMinimized: index == 6,
+                    accessibilityReference: PreviewAccessibilityWindowReference(
+                        element: AXUIElementCreateApplication(101), processIdentifier: 101,
+                        applicationLaunchDate: Date(timeIntervalSince1970: 100)
+                    )
+                )
+            }
+            let surfaces = documents.prefix(5).enumerated().map { index, document in
+                PreviewWindowInfo(
+                    id: "cg-\(index + 1)", windowID: CGWindowID(index + 1),
+                    processIdentifier: 101, appName: "Editor", title: "Editor",
+                    frame: document.frame, isMinimized: false
+                )
+            }
+            let merged = WindowInventorySwitcherSnapshotPolicy.merge(
+                accessibilityWindows: documents, windowServerWindows: surfaces
+            )
+            XCTAssertEqual(merged.map(\.title), documents.map(\.title))
+            XCTAssertEqual(merged.prefix(5).map(\.id), surfaces.map(\.id))
+            XCTAssertEqual(merged.prefix(5).compactMap(\.windowID), [1, 2, 3, 4, 5])
+            XCTAssertEqual(merged.map(\.accessibilityReference), documents.map(\.accessibilityReference))
+            XCTAssertEqual(merged.last?.isMinimized, true)
+        }
+    }
+
     func testUnnumberedMinimizedWindowKeepsExactReferenceThroughInventory() throws {
         let reference = PreviewAccessibilityWindowReference(
             element: AXUIElementCreateApplication(101), processIdentifier: 101,
