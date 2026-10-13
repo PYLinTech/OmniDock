@@ -1,7 +1,6 @@
-# OmniDock 1.2.10
+# OmniDock 1.2.11
 
-- Refresh manual update checks and recover safely from stale GitHub release cache responses.
-- Bring live previews to both window switchers, include OmniDock's own standard windows, keep preview status current as workspace state changes, and align the app icon with macOS Dock sizing.
-- Focus selected windows more reliably, including minimized windows and windows with matching titles, while rejecting stale targets.
-- Improve Finder menu language, selected-item targeting, and sandboxed folder access when opening items with chosen applications.
-- Preserve feature choices through temporary permission changes and stabilize settings and menu bar shelf controls during configuration and Command-drag arrangement.
+- Improve window-list recovery after apps minimize and restore windows.
+- Preserve document titles and exact-window navigation without Screen Recording.
+- Clarify Input Monitoring requirements for enhanced Command-Tab previews while keeping native app switching and saved preferences intact.
+- Improve narrow preview placeholder readability.
