@@ -200,6 +200,61 @@ final class CmdTabPreviewServiceTests: XCTestCase {
         XCTAssertTrue(fixture.settings.showCommandTabPreviews)
     }
 
+    func testMissingInputMonitoringDoesNotPresentOrChangePreferences() {
+        let fixture = Fixture()
+        defer { fixture.stop() }
+        fixture.windows = [fixture.window(1)]
+        fixture.hasInputMonitoring = false
+        fixture.show()
+
+        XCTAssertNil(fixture.panel.frame)
+        XCTAssertTrue(fixture.captureReplies.isEmpty)
+        XCTAssertTrue(fixture.settings.showDockPreviews)
+        XCTAssertTrue(fixture.settings.showCommandTabPreviews)
+    }
+
+    func testInputMonitoringLossCancelsPendingCaptureAndRestoresOnlyOnANewInteraction() async {
+        let fixture = Fixture()
+        defer { fixture.stop() }
+        fixture.hasRecording = true
+        fixture.windows = [fixture.window(1)]
+        fixture.service.start()
+        fixture.show()
+        XCTAssertEqual(fixture.captureReplies.count, 1)
+
+        fixture.hasInputMonitoring = false
+        NotificationCenter.default.post(name: PermissionService.changedNotification, object: nil)
+        await drainMainQueue()
+        XCTAssertNil(fixture.panel.frame)
+        XCTAssertEqual(fixture.activityChanges, [true, false])
+        fixture.captureReplies.first?(nil, nil)
+        await drainMainQueue()
+        XCTAssertNil(fixture.panel.frame)
+
+        fixture.hasInputMonitoring = true
+        NotificationCenter.default.post(name: PermissionService.changedNotification, object: nil)
+        await drainMainQueue()
+        XCTAssertNil(fixture.panel.frame, "Granting permission must not reopen the old interaction")
+        fixture.hasRecording = false
+        fixture.show()
+        XCTAssertEqual(fixture.displayedIDs, [1])
+        XCTAssertTrue(fixture.settings.showCommandTabPreviews)
+    }
+
+    func testInputMonitoringLossBeforeQueuedRefreshDoesNotReadWindows() async {
+        let fixture = Fixture()
+        defer { fixture.stop() }
+        fixture.windows = [fixture.window(1)]
+        fixture.show()
+        fixture.inventory.invalidate(processIdentifier: fixture.pid, reason: .created)
+        fixture.hasInputMonitoring = false
+        await drainMainQueue()
+
+        XCTAssertTrue(fixture.inventoryReads.isEmpty)
+        XCTAssertNil(fixture.panel.frame)
+        XCTAssertEqual(fixture.activityChanges, [true, false])
+    }
+
     func testKnownWindowRemovalImmediatelyRemovesOnlyItsCard() async {
         let fixture = Fixture()
         defer { fixture.stop() }
@@ -329,6 +384,7 @@ final class CmdTabPreviewServiceTests: XCTestCase {
         var inventoryReads: [pid_t] = []
         var hasRecording = false
         var hasAccessibility = true
+        var hasInputMonitoring = true
         var activityChanges: [Bool] = []
         var captureReplies: [(SCShareableContent?, Error?) -> Void] = []
         let panel = PreviewPanelController(requestWindowFocus: { _, _ in }, requestWindowClose: { _, _, _, _ in })
@@ -347,7 +403,8 @@ final class CmdTabPreviewServiceTests: XCTestCase {
             settings: settings, permissionService: PermissionService(), windowInventory: inventory,
             previewService: previewService, previewPanelController: panel,
             permissionSnapshotProvider: { [unowned self] in
-                PermissionSnapshot(accessibility: hasAccessibility, screenRecording: hasRecording, inputMonitoring: true)
+                PermissionSnapshot(accessibility: hasAccessibility, screenRecording: hasRecording,
+                                   inputMonitoring: hasInputMonitoring)
             }, onActivityChanged: { [unowned self] in activityChanges.append($0) }
         )
 

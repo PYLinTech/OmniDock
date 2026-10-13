@@ -413,7 +413,7 @@ public final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSSe
 
     @objc private func toggleCommandTabPreview(_ sender: NSSwitch) {
         settings.showCommandTabPreviews = sender.state == .on
-        if settings.showCommandTabPreviews { requestMissingPermission(for: .dockPreview) }
+        if settings.showCommandTabPreviews { requestMissingPermission(for: .commandTabPreview) }
     }
 
     @objc private func toggleWindowCycle(_ sender: NSSwitch) {
@@ -1050,6 +1050,9 @@ public final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSSe
             detail: AppStrings.text(.settingsCommandTabPreviewDetail),
             control: commandTabPreviewSwitch
         ))
+        let commandTabPermissionView = makeFeaturePermissionView(.commandTabPreview)
+        toggles.addArrangedSubview(commandTabPermissionView)
+        commandTabPermissionView.widthAnchor.constraint(equalTo: toggles.widthAnchor).isActive = true
 
         let windowCycleSwitch = NSSwitch()
         windowCycleSwitch.target = self

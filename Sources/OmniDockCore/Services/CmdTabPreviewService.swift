@@ -50,7 +50,7 @@ final class CmdTabPreviewService {
             return self.settings.showDockPreviews
                 && self.settings.showCommandTabPreviews
                 && PermissionFeatureGate.isSatisfied(
-                    for: .dockPreview,
+                    for: .commandTabPreview,
                     in: self.permissionSnapshotProvider()
                 )
         }
@@ -122,6 +122,7 @@ final class CmdTabPreviewService {
                 let snapshot = self.permissionSnapshotProvider()
                 let changed = self.lastPermissionSnapshot?.accessibility != snapshot.accessibility
                     || self.lastPermissionSnapshot?.screenRecording != snapshot.screenRecording
+                    || self.lastPermissionSnapshot?.inputMonitoring != snapshot.inputMonitoring
                 self.lastPermissionSnapshot = snapshot
                 guard changed, self.isInteractionActive, let target = self.currentTarget else { return }
                 self.showPreview(for: target)
@@ -164,9 +165,9 @@ final class CmdTabPreviewService {
     }
 
     private var canPresent: Bool {
-        isInteractionActive && settings.showCommandTabPreviews
+        isInteractionActive
             && PermissionFeatureGate.availability(
-                for: .dockPreview, settings: settings, snapshot: permissionSnapshotProvider()
+                for: .commandTabPreview, settings: settings, snapshot: permissionSnapshotProvider()
             ).canRun
     }
 

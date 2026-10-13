@@ -132,7 +132,7 @@ cat >"$INFO_PLIST" <<PLIST
   <key>NSScreenCaptureUsageDescription</key>
   <string>OmniDock uses Screen Recording permission to create window thumbnails, including live images and one-time static snapshots, above Dock icons.</string>
   <key>NSInputMonitoringUsageDescription</key>
-  <string>OmniDock uses Input Monitoring to detect Dock icon clicks and Option-Tab while its window switcher is open.</string>
+  <string>OmniDock uses Input Monitoring for Dock clicks, enhanced Command-Tab previews, Option-Tab, and window drag gestures.</string>
   <key>NSDesktopFolderUsageDescription</key>
   <string>OmniDock needs access to your Desktop to create files from Finder right-click actions.</string>
   <key>NSDocumentsFolderUsageDescription</key>

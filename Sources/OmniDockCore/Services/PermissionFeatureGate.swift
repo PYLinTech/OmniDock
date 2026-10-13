@@ -3,6 +3,7 @@ import Foundation
 public enum PermissionFeature: String, CaseIterable, Hashable {
     case dockClick
     case dockPreview
+    case commandTabPreview
     // Preserve pending onboarding requests saved by earlier builds.
     case windowCycle = "independentWindowSwitcher"
     case hotkeys
@@ -15,6 +16,8 @@ public enum PermissionFeature: String, CaseIterable, Hashable {
             return [.accessibility, .inputMonitoring]
         case .dockPreview:
             return [.accessibility]
+        case .commandTabPreview:
+            return [.accessibility, .inputMonitoring]
         case .windowCycle:
             return [.accessibility, .inputMonitoring]
         case .hotkeys:
@@ -77,6 +80,7 @@ public enum PermissionFeatureGate {
         switch feature {
         case .dockClick: isEnabled = settings.toggleAppVisibilityOnDockClick
         case .dockPreview: isEnabled = settings.showDockPreviews
+        case .commandTabPreview: isEnabled = settings.showDockPreviews && settings.showCommandTabPreviews
         case .windowCycle: isEnabled = settings.showDockPreviews && settings.windowCycleEnabled
         case .hotkeys: isEnabled = settings.hotkeysEnabled
         case .finderExtension: isEnabled = settings.finderExtensionEnabled
@@ -85,7 +89,8 @@ public enum PermissionFeatureGate {
         guard isEnabled else { return .disabled }
         let missing = missingPermissions(for: feature, in: snapshot)
         guard missing.isEmpty else { return .unavailable(missing) }
-        if (feature == .dockPreview || feature == .windowCycle), !snapshot.screenRecording {
+        if (feature == .dockPreview || feature == .commandTabPreview || feature == .windowCycle),
+           !snapshot.screenRecording {
             return .metadataOnly
         }
         return .available
@@ -110,6 +115,8 @@ public enum PermissionFeatureGate {
                 settings.toggleAppVisibilityOnDockClick = true
             case .dockPreview:
                 settings.showDockPreviews = true
+            case .commandTabPreview:
+                settings.showCommandTabPreviews = true
             case .windowCycle:
                 settings.windowCycleEnabled = true
             case .hotkeys:

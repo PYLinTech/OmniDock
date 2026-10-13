@@ -5,6 +5,7 @@ final class PermissionFeatureGateTests: XCTestCase {
     func testFeaturePermissionRequirements() {
         XCTAssertEqual(PermissionFeature.dockClick.requiredPermissions, [.accessibility, .inputMonitoring])
         XCTAssertEqual(PermissionFeature.dockPreview.requiredPermissions, [.accessibility])
+        XCTAssertEqual(PermissionFeature.commandTabPreview.requiredPermissions, [.accessibility, .inputMonitoring])
         XCTAssertEqual(PermissionFeature.windowCycle.requiredPermissions, [.accessibility, .inputMonitoring])
         XCTAssertEqual(PermissionFeature.hotkeys.requiredPermissions, [.accessibility])
         XCTAssertEqual(PermissionFeature.windowPlacement.requiredPermissions, [.accessibility, .inputMonitoring])
@@ -23,6 +24,7 @@ final class PermissionFeatureGateTests: XCTestCase {
 
         XCTAssertEqual(PermissionFeatureGate.missingPermissions(for: .dockClick, in: snapshot), [.inputMonitoring])
         XCTAssertTrue(PermissionFeatureGate.missingPermissions(for: .dockPreview, in: snapshot).isEmpty)
+        XCTAssertEqual(PermissionFeatureGate.missingPermissions(for: .commandTabPreview, in: snapshot), [.inputMonitoring])
         XCTAssertTrue(PermissionFeatureGate.missingPermissions(for: .hotkeys, in: snapshot).isEmpty)
     }
 
@@ -42,7 +44,7 @@ final class PermissionFeatureGateTests: XCTestCase {
             for feature in PermissionFeature.allCases {
                 let state = PermissionFeatureGate.availability(for: feature, settings: store, snapshot: snapshot)
                 XCTAssertEqual(state.canRun, PermissionFeatureGate.isSatisfied(for: feature, in: snapshot))
-                if state.canRun, feature == .dockPreview || feature == .windowCycle {
+                if state.canRun, feature == .dockPreview || feature == .commandTabPreview || feature == .windowCycle {
                     XCTAssertEqual(state, snapshot.screenRecording ? .available : .metadataOnly)
                 }
             }
@@ -78,7 +80,7 @@ final class PermissionFeatureGateTests: XCTestCase {
         for feature in PermissionFeature.allCases { setEnabled(feature, in: store, to: false) }
         store.liveDockPreviewsEnabled = false
         store.showCommandTabPreviews = false
-        store.pendingPermissionFeatures = Set(PermissionFeature.allCases)
+        store.pendingPermissionFeatures = Set(PermissionFeature.allCases.filter { $0 != .commandTabPreview })
 
         PermissionFeatureGate.restorePendingPreferences(in: store)
 
@@ -107,6 +109,21 @@ final class PermissionFeatureGateTests: XCTestCase {
         XCTAssertTrue(store.windowCycleEnabled)
     }
 
+    func testCommandTabRequiresItsOwnPermissionWithoutDisablingDockMetadataNavigation() {
+        let store = SettingsStore(defaults: isolatedDefaults(), livePreviewLimitProvider: { 8 })
+        store.showDockPreviews = true
+        store.showCommandTabPreviews = true
+        let withoutInput = PermissionSnapshot(accessibility: true, screenRecording: false, inputMonitoring: false)
+        let withInput = PermissionSnapshot(accessibility: true, screenRecording: false, inputMonitoring: true)
+
+        XCTAssertEqual(PermissionFeatureGate.availability(for: .dockPreview, settings: store, snapshot: withoutInput), .metadataOnly)
+        XCTAssertEqual(PermissionFeatureGate.availability(for: .commandTabPreview, settings: store, snapshot: withoutInput), .unavailable([.inputMonitoring]))
+        XCTAssertEqual(PermissionFeatureGate.availability(for: .commandTabPreview, settings: store, snapshot: withInput), .metadataOnly)
+        store.showDockPreviews = false
+        XCTAssertEqual(PermissionFeatureGate.availability(for: .commandTabPreview, settings: store, snapshot: withInput), .disabled)
+        XCTAssertTrue(store.showCommandTabPreviews)
+    }
+
     func testAllOnboardingPermissionsGrantedRequiresEveryPermission() {
         XCTAssertTrue(PermissionFeatureGate.allOnboardingPermissionsGranted(in: PermissionSnapshot(
             accessibility: true, screenRecording: true, inputMonitoring: true,
@@ -122,6 +139,7 @@ final class PermissionFeatureGateTests: XCTestCase {
         switch feature {
         case .dockClick: store.toggleAppVisibilityOnDockClick = enabled
         case .dockPreview: store.showDockPreviews = enabled
+        case .commandTabPreview: store.showCommandTabPreviews = enabled
         case .windowCycle: store.windowCycleEnabled = enabled
         case .hotkeys: store.hotkeysEnabled = enabled
         case .finderExtension: store.finderExtensionEnabled = enabled

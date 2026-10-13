@@ -53,7 +53,7 @@
   <key>NSHumanReadableCopyright</key>
   <string>Copyright (c) 2026 Chengdu Quanzhan Technology Co., Ltd</string>
 	<key>NSInputMonitoringUsageDescription</key>
-	<string>OmniDock uses Input Monitoring to detect Dock icon clicks and Option-Tab while its window switcher is open.</string>
+	<string>OmniDock uses Input Monitoring for Dock clicks, enhanced Command-Tab previews, Option-Tab, and window drag gestures.</string>
 	<key>NSDesktopFolderUsageDescription</key>
 	<string>OmniDock needs access to your Desktop to create files from Finder right-click actions.</string>
 	<key>NSDocumentsFolderUsageDescription</key>

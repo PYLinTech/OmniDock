@@ -172,8 +172,8 @@ preview panel.
 
 | # | Do this | Expect |
 |---|---|---|
-| P1 | Grant Accessibility, but not Screen Recording or Input Monitoring | Dock hover and enhanced Command-Tab offer window titles, app icons, minimized state and exact-window selection without starting capture. Option-Tab and Dock click toggling remain unavailable |
-| P2 | Also grant Input Monitoring, still without Screen Recording | Option-Tab offers the same metadata-only navigation. No cached or newly captured window image appears in any of the three entries |
+| P1 | Grant Accessibility, but not Screen Recording or Input Monitoring | Dock hover offers window titles, app icons, minimized state and exact-window selection without starting capture. Enhanced Command-Tab, Option-Tab and Dock click toggling remain unavailable, with a missing-permission explanation; native Command-Tab is unchanged |
+| P2 | Also grant Input Monitoring, still without Screen Recording | Enhanced Command-Tab and Option-Tab offer the same metadata-only navigation. No cached or newly captured window image appears in any of the three entries |
 | P3 | Revoke Screen Recording with each preview open | Captures stop, late image callbacks are ignored, old images are cleared, and metadata remains available after permission reconciliation |
 | P4 | Grant Screen Recording again | Image previews resume according to the saved live/static preference when the grant becomes visible to the process. Record a macOS-required restart as such |
 | P5 | Revoke a basic permission, then turn the affected feature off before granting it again | Its saved switch stays off; granting permission does not override that choice |
@@ -1309,3 +1309,114 @@ has passed on three machines and fails on a fourth is worth being able to see.
 - No push, version change, notarization or release is part of this checkpoint.
   The macOS 15 input-monitoring-denial case and explicitly untested portions of
   the interaction matrices remain open; this is not full release acceptance.
+
+### 2026-10-12 · Command-Tab permission boundary and narrow placeholders
+
+- Isolated the remaining macOS 15.6.1 failure with Accessibility and Screen
+  Recording granted but Input Monitoring explicitly denied. After the required
+  Quit & Reopen, the native Command-Tab switcher worked but the enhanced panel
+  did not appear. System TCC logs show WindowServer's ListenEvent check for that
+  installed OmniDock process denied while its accessibility and capture checks
+  succeeded. This establishes the tested permission boundary, not a capture
+  failure or justification to bypass a denied grant.
+- Added an independent enhanced Command-Tab gate requiring Accessibility and
+  Input Monitoring, plus its own missing-permission state and authorization
+  button in Settings. Dock metadata navigation continues to require only
+  Accessibility. Permission loss cancels the old interaction and rejects late
+  asynchronous work without changing saved switches. Updated P1/P2 and the
+  bilingual permission disclosures to match this contract.
+- On the final signed guest candidate, with only Accessibility granted, native
+  Command-Tab remained usable without an OmniDock panel, and a Dock metadata
+  card focused document E. With Input Monitoring also granted but recording
+  still denied, an enhanced Command-Tab metadata card focused document D.
+  Exact AXDocument, focused window and foreground process were checked, and no
+  cached thumbnail appeared. The Settings authorization button opened Input
+  Monitoring. Turning the Command-Tab option off while input was denied kept
+  it off after reauthorization; it was then restored to its original state.
+- Found an English placeholder clipped inside a narrow metadata card. Enabled
+  word wrapping on the native label while retaining its two-line limit and
+  existing layout. The new regression failed before the change. Minimum-width
+  tests cover three localized messages in English and Simplified Chinese under
+  Aqua and Dark Aqua; the final guest screenshot shows the full two-line text.
+- In the final guest's metadata-only mode, moving from a TextEdit preview to
+  Launchpad, a windowless App Store icon, or outside the Dock removed the old
+  panel. Returning to TextEdit showed a fresh panel. After restoring recording,
+  image previews returned, and three Command-Tab/Esc cycles each removed the
+  panel without changing the foreground app. This is partial H/K coverage, not
+  diagonal/fast-pointer, side-Dock, drag-and-drop or complete matrix acceptance.
+- **866 tests passed with compiler warnings treated as errors.** Strict SwiftPM
+  and Xcode arm64 Release builds, generated-project consistency, staged bundle
+  validation and strict nested/all-architecture signature checks passed. The
+  five added tests cover denied-input gating, in-flight capture cancellation,
+  queued-refresh rejection, independent Dock/Command-Tab availability, and
+  placeholder layout. These checks do not constitute Universal 2 or
+  notarization acceptance.
+- Installed the Developer ID signed arm64 candidate only in the guest, still
+  version `1.2.10`, build `20`. Its executable SHA-256 is
+  `aec1bb51265fb4bf394b3a4279367796048492cc6ab6853a08f7f04e296f7dd9`.
+  The host remains on the preceding `e2240d1` candidate with the executable hash
+  recorded above; host privacy grants were untouched. Both systems list one
+  enabled Finder extension at the installed app path.
+- Restored all five guest grants and the original preview switches
+  `{1,1,0,1,0,0}`. Closed only the three owned test documents and test settings
+  windows, released modifiers, and stopped the temporary transfer servers.
+  Evidence is retained in the ignored `.private/acceptance-20261012/` directory.
+- The two concrete corrections are complete locally but uncommitted. No push,
+  version bump or release was performed. Host permission revocation, live
+  cross-service ownership, the remaining full F/H/K/P/V matrices and broader
+  three-entry interruption coverage remain open; restart-based permission
+  results must not be relabeled as live revocation evidence.
+
+### 2026-10-12 · host installation and permission/pointer follow-up
+
+- Rebuilt the current source and installed the Developer ID signed arm64 app
+  and Finder extension on macOS 26.6.2. The host executable SHA-256 is
+  `5447a63c0807e69f312ea0f28921a501f99de288260a77097fea6d31244de0f2`.
+  The macOS 15.6.1 guest retains the preceding build of the same source with
+  hash `aec1bb51265fb4bf394b3a4279367796048492cc6ab6853a08f7f04e296f7dd9`.
+  Both remain version `1.2.10`, build `20`; these separate local builds are not
+  a new release or Universal 2/notarization acceptance.
+- Re-ran **866 tests with compiler warnings treated as errors**, all passing.
+  Both installed apps pass deep, strict, all-architecture signature validation
+  and each system lists one enabled Finder extension at the installed path.
+- With user-approved host permission changes, Input Monitoring denial left
+  native Command-Tab available and Settings showed the enhanced switcher's
+  missing capability without changing saved feature switches. With both Input
+  Monitoring and Screen Recording denied, Dock metadata cards showed three
+  document titles and clicking D focused exactly that document. Restoring Input
+  Monitoring while recording remained denied enabled enhanced Command-Tab
+  metadata, whose C card focused exactly C. AXDocument, focused window and
+  foreground process were checked. No cached images appeared in either case.
+  The system-requested Quit & Reopen was honored at every transition; these
+  are restart-based P1/P2 results, not active-session revocation coverage.
+- Restoring recording restored image previews in Command-Tab and Option-Tab.
+  A fresh Option-Tab panel appeared in 0.240 seconds, including input dispatch;
+  this measures ordinary invocation, not wake recovery or complete rendering.
+  Closing each active switcher through its own Settings switch removed the
+  panel without changing the foreground process, including after modifier
+  release. Each switch was restored after its test. The previously inconclusive
+  host AX fixture state no longer prevented exact-document acceptance.
+- On the host's external display, three-card Dock previews stayed visible
+  along a slow left diagonal (1.123 seconds), fast right diagonal (0.153
+  seconds), and straight route (0.792 seconds). Every sample retained one
+  panel and the foreground process stayed unchanged. Moving outside the
+  retained route dismissed the panel. This is scoped H1/H2 coverage, not a
+  long overflowing list or drag-and-drop acceptance.
+- Guest left and right Dock routes retained one panel throughout and did not
+  change the foreground app. Right placement with both auto-hide and
+  magnification enabled also retained the panel after revealing the Dock and
+  reading its current icon geometry. The measured routes took 0.482, 2.621
+  and 1.715 seconds respectively; requested input durations are not used as
+  the observed VM timings. Bottom placement, auto-hide off and magnification
+  off were restored. These checks cover specific H5 routes, not all H1-H3
+  combinations under every Dock configuration.
+- Both systems again show all five permissions granted. Host preview switches
+  remain `{1,1,1,1,1,0}` with live count `6`; guest switches remain
+  `{1,1,0,1,0,0}` with live count `3`. Both systems' fixture documents and test
+  Settings windows were closed, modifiers released, and temporary transfer/input
+  processes stopped. A guest capture-helper permission prompt was dismissed
+  without granting additional access; it was not an OmniDock permission failure.
+- No new runtime fix was required by these checks. Remaining acceptance still
+  includes active permission revocation/shared-panel ownership, complete
+  F/H/K/P/V combinations, file dragging, and three-entry repeated or overlapping
+  physical display/sleep interruptions. No commit, push or release was made.

@@ -93,11 +93,11 @@ Grant only the permissions needed for the features you enable.
 | Permission | Used for |
 | --- | --- |
 | Accessibility | Dock and window control, app hotkeys, window layouts, and optional clipboard auto-paste |
-| Input Monitoring | Dock clicks, Option-Tab, and window drag zones |
+| Input Monitoring | Dock clicks, enhanced Command-Tab previews, Option-Tab, and window drag zones |
 | Screen Recording | Live and static window thumbnails |
 | Finder Extension and folder access | Finder commands and creating files in a folder you approve |
 
-Screen Recording is optional for navigation: with Accessibility granted, Dock and Command-Tab previews can show window titles and app icons without thumbnails. Option-Tab also requires Input Monitoring. Windows not exposed by the owning app's accessibility interface cannot appear in this mode.
+Screen Recording is optional for navigation: with Accessibility granted, Dock previews can show window titles and app icons without thumbnails. Enhanced Command-Tab and Option-Tab offer the same navigation with Input Monitoring also granted. Without Input Monitoring, native Command-Tab still works, but OmniDock's added previews are unavailable. Windows not exposed by the owning app's accessibility interface cannot appear in metadata-only mode.
 
 Missing permissions pause the affected functionality without changing your switches. Settings shows the missing permission and an authorization button; granting it resumes enabled features. A switch you turn off stays off.
 

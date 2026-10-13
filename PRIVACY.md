@@ -29,7 +29,7 @@ Entry contents are encrypted on disk. OmniDock seals the copied content, its pre
 OmniDock may request the following macOS permissions:
 
 - Accessibility: used to identify Dock items; raise, focus, hide, close, move, or resize windows when requested; operate per-app hotkeys; and perform automatic paste only when the user explicitly chooses that clipboard action.
-- Input Monitoring: used to detect Dock icon click gestures, operate the optional Option-Tab window switcher, and recognize pointer gestures used by optional window drag zones. OmniDock does not record or save typed text.
+- Input Monitoring: used to detect Dock icon click gestures, show optional previews beside the native Command-Tab switcher, operate the optional Option-Tab window switcher, and recognize pointer gestures used by optional window drag zones. OmniDock does not record or save typed text.
 - Screen Recording: used to generate window thumbnails, including live images and one-time static snapshots.
 - Finder Extension: used to add the enabled OmniDock commands to Finder contextual menus.
 - Folder Access: stores a security-scoped bookmark only for a folder the user explicitly approves, so New File can write to that location without broad file-system access.

@@ -294,6 +294,7 @@ final class PreviewThumbnailView: NSView {
 
         placeholderField.stringValue = info.placeholderText ?? (info.isMinimized ? AppStrings.text(.previewMinimizedClickRestore) : "")
         placeholderField.alignment = .center
+        placeholderField.lineBreakMode = .byWordWrapping
         placeholderField.maximumNumberOfLines = 2
         placeholderField.font = .systemFont(ofSize: 12, weight: .medium)
         placeholderField.isHidden = placeholderField.stringValue.isEmpty || info.staticPreviewImage != nil

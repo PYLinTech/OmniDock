@@ -3,6 +3,35 @@ import XCTest
 @testable import OmniDockCore
 
 final class PreviewThumbnailViewTests: XCTestCase {
+    func testNarrowPlaceholderWrapsInsteadOfClippingInBothAppearances() throws {
+        let base = previewInfo()
+        let messages: [String] = [AppLanguage.en, .zhHans].flatMap { language -> [String] in
+            [AppStringKey.previewMetadataOnly, .previewWindowContentUnavailable, .previewMinimizedClickRestore]
+                .map { LocalizedResourceCatalog.text($0, language: language) }
+        }
+        for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+            for message in messages {
+                let tile = PreviewThumbnailView(info: PreviewWindowInfo(
+                    id: base.id, windowID: base.windowID, processIdentifier: base.processIdentifier,
+                    appName: base.appName, title: base.title, frame: base.frame,
+                    isMinimized: false, placeholderText: message
+                ), showsApplicationIdentity: true)
+                tile.appearance = NSAppearance(named: appearance)
+                tile.frame.size = CGSize(width: PreviewLayoutCalculator.minTileWidth,
+                                         height: tile.preferredTileSize.height)
+                tile.layoutSubtreeIfNeeded()
+                let label = try XCTUnwrap(tile.subviews.compactMap { $0 as? NSTextField }.first {
+                    $0.stringValue == message
+                })
+                XCTAssertEqual(label.lineBreakMode, .byWordWrapping)
+                XCTAssertFalse(try XCTUnwrap(label.cell).usesSingleLineMode)
+                XCTAssertTrue(tile.bounds.contains(label.frame))
+                let required = try XCTUnwrap(label.cell).cellSize(forBounds: label.bounds)
+                XCTAssertLessThanOrEqual(required.height, label.bounds.height)
+            }
+        }
+    }
+
     func testTitleOnlyUpdatePreservesLiveImageLayoutAndActionIdentity() throws {
         let original = previewInfo()
         let tile = PreviewThumbnailView(info: original)
