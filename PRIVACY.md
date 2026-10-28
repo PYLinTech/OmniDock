@@ -1,6 +1,6 @@
 # OmniDock Privacy Policy
 
-Effective date: July 25, 2026
+Effective date: October 27, 2026
 
 OmniDock is a local macOS utility for window previews and switching, app control, Finder right-click commands, optional clipboard history, window layouts, and menu bar organization. This policy explains what data the app handles and how it is used.
 
@@ -36,7 +36,7 @@ OmniDock may request the following macOS permissions:
 
 These permissions are used locally for OmniDock features. OmniDock does not upload screen contents, keyboard input, window contents, file contents, shortcut bindings, or application usage data.
 
-Hidden Bar uses macOS status-item behavior and does not require an additional privacy permission.
+On macOS 26 and earlier, Hidden Bar uses macOS status-item behavior without an additional privacy permission. On macOS 27 or later, it uses Accessibility to read running applications' menu bar item positions and determine which applications the user placed behind the divider. This layout is processed in memory on the Mac and is not uploaded or retained as an application-usage history. The visibility restriction is released when the section expands, the feature is disabled, or OmniDock quits. System controls remain visible.
 
 ## Third-Party Services
 

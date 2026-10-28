@@ -63,12 +63,14 @@ final class MenuBarShelfSettingsView: NSView {
         enableSwitch.action = #selector(toggleFeature(_:))
         stack.addArrangedSubview(makeSettingRow(
             title: AppStrings.text(.menuBarShelfEnableTitle),
-            detail: AppStrings.text(.menuBarShelfEnableDetail),
+            detail: AppStrings.text(ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+                ? .menuBarShelfModernDetail : .menuBarShelfEnableDetail),
             control: enableSwitch
         ))
 
         autoHideSwitch.target = self
         autoHideSwitch.action = #selector(toggleAutoHide(_:))
+        autoHideSwitch.setAccessibilityLabel(AppStrings.text(.menuBarShelfAutoHideTitle))
         configureDelayPopup()
         let autoHideControls = NSStackView(views: [delayPopup, autoHideSwitch])
         autoHideControls.orientation = .horizontal

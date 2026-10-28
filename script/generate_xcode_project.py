@@ -70,7 +70,8 @@ def load_version_manifest() -> tuple[str, str]:
 def list_app_sources() -> list[str]:
     app = sorted(rel(path) for path in (ROOT / "Sources" / PROJECT_NAME).rglob("*.swift"))
     core = sorted(rel(path) for path in (ROOT / "Sources" / "OmniDockCore").rglob("*.swift"))
-    return [*app, *core]
+    native = sorted(rel(path) for path in (ROOT / "Sources" / "OmniDockMenuBarRuntime").rglob("*.m"))
+    return [*app, *core, *native]
 
 
 def list_finder_extension_sources() -> list[str]:
@@ -90,6 +91,7 @@ def list_swift_sources() -> list[str]:
 
 def list_resource_references() -> list[str]:
     resources = [
+        "Sources/OmniDockMenuBarRuntime/include/OmniDockMenuBarRuntime.h",
         "Resources/Assets.xcassets",
         "Resources/OmniDock-Development.entitlements",
         "Resources/OmniDock-AppStore.entitlements",
@@ -242,9 +244,10 @@ def generate_pbxproj() -> str:
     )
     for path in all_swift_sources:
         name = Path(path).name
+        source_type = "sourcecode.c.objc" if path.endswith(".m") else "sourcecode.swift"
         lines.append(
             f"\t\t{file_refs[path]} /* {name} */ = "
-            f"{{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {q(path)}; "
+            f"{{isa = PBXFileReference; lastKnownFileType = {source_type}; path = {q(path)}; "
             f"sourceTree = SOURCE_ROOT; }};"
         )
     for path in resource_refs:
@@ -662,6 +665,7 @@ mkdir -p "$resources_dir"
         "SDKROOT": "macosx",
         "SKIP_INSTALL": "NO",
         "SUPPORTED_PLATFORMS": "macosx",
+        "SWIFT_OBJC_BRIDGING_HEADER": "Sources/OmniDockMenuBarRuntime/include/OmniDockMenuBarRuntime.h",
         "SWIFT_VERSION": "5.0",
     }
     debug_target_settings = {

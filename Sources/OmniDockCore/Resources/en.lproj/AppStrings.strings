@@ -101,6 +101,8 @@
 
 "menuBarShelfEnableTitle" = "Enable Hidden Bar";
 "menuBarShelfEnableDetail" = "Keep less-used menu bar icons behind an expandable divider.";
+"menuBarShelfModernDetail" = "Requires Accessibility on macOS 27 or later. Icons from the same app are grouped together; system controls stay visible.";
+"menuBarShelfUnavailable" = "Unable to hide icons. Check Accessibility permission and try again with the menu bar expanded.";
 "menuBarShelfAutoHideTitle" = "Automatically Hide";
 "menuBarShelfAutoHideDetail" = "Collapse the hidden section after the selected delay.";
 "menuBarShelfSeconds" = "%d seconds";

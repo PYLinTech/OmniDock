@@ -182,6 +182,7 @@ public final class PreviewPanelController {
         rebuildContent(target: target, windows: visibleWindows, message: message)
         panel.setFrame(panelFrame(target: target, windows: visibleWindows), display: true)
         layoutScrollableContent()
+        scrollSelectedWindowIntoViewIfNeeded()
         panel.orderFrontRegardless()
         notifyCommandTabButtonTargetsChanged()
     }
@@ -925,6 +926,8 @@ public final class PreviewPanelController {
             return
         }
 
+        // A rebuilt grid has new card frames even when the selected identity is unchanged.
+        documentView.layoutSubtreeIfNeeded()
         let tileFrame = tile.convert(tile.bounds, to: documentView)
         let visibleBounds = scrollView.contentView.bounds
         var targetOrigin = visibleBounds.origin

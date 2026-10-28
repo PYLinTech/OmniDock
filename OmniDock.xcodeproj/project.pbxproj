@@ -52,6 +52,7 @@
 		8FECE3B5E53FD8392CB4303F /* LivePreviewCaptureSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AAFFA2BCCC66961497DCE50 /* LivePreviewCaptureSession.swift */; };
 		340A3DD220433F342BECFA72 /* LocalizedResourceCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3033C62D64E624BFF8B5B231 /* LocalizedResourceCatalog.swift */; };
 		0BA483CE02665B663606AEAB /* MenuBarShelfService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B396AE9113FDF2E5F6BD8FB /* MenuBarShelfService.swift */; };
+		3F2DEF5B2515C095308C0FED /* MenuBarShelfVisibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCEBA8BF3B459275A3A48166 /* MenuBarShelfVisibility.swift */; };
 		EBCE645D836C38D5EF7CFB4A /* PermissionFeatureGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10437BC999C1A1308759C9D7 /* PermissionFeatureGate.swift */; };
 		8FBBEBF4FD11BC90225961B7 /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EB156D36C57534D57A0C3C7 /* PermissionService.swift */; };
 		3CA3D2CDF2ACB367DB6E60FF /* PreviewCaptureConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCEC50E0969F4AB6AC97D390 /* PreviewCaptureConfiguration.swift */; };
@@ -112,6 +113,7 @@
 		94E7ED2A11D974BB6586BD9E /* WindowPlacementPaletteController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84D366587D7366DF51E091AD /* WindowPlacementPaletteController.swift */; };
 		532523EC4B5D2D3B25E76E33 /* WindowPlacementSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F50771B3DC0D16851E07DE4D /* WindowPlacementSettingsView.swift */; };
 		1A2FA8FC769EDC4761A6A669 /* WindowPlacementSizeHUDController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38D1FF25E426EB09B8802EB2 /* WindowPlacementSizeHUDController.swift */; };
+		5DDC9F66EBE667DE445713AF /* MenuBarVisibility.m in Sources */ = {isa = PBXBuildFile; fileRef = CD94AF12253F391831969DB1 /* MenuBarVisibility.m */; };
 		F39A46ABDFFB4D66C30CCB96 /* FinderMenuExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18BD2DED7E1CE111A4BEDCA /* FinderMenuExtension.swift */; };
 		9D911175F92E7321EE00D1B2 /* FinderApplicationTargets.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE7A12D34DEDE6F86B76B8E /* FinderApplicationTargets.swift */; };
 		1CD0553BB69B87377A2529AA /* FinderCommandTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52CD10A1601C5E9DDC60C8EF /* FinderCommandTransport.swift */; };
@@ -186,6 +188,7 @@
 		2AAFFA2BCCC66961497DCE50 /* LivePreviewCaptureSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/LivePreviewCaptureSession.swift"; sourceTree = SOURCE_ROOT; };
 		3033C62D64E624BFF8B5B231 /* LocalizedResourceCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/LocalizedResourceCatalog.swift"; sourceTree = SOURCE_ROOT; };
 		1B396AE9113FDF2E5F6BD8FB /* MenuBarShelfService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/MenuBarShelfService.swift"; sourceTree = SOURCE_ROOT; };
+		BCEBA8BF3B459275A3A48166 /* MenuBarShelfVisibility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/MenuBarShelfVisibility.swift"; sourceTree = SOURCE_ROOT; };
 		10437BC999C1A1308759C9D7 /* PermissionFeatureGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/PermissionFeatureGate.swift"; sourceTree = SOURCE_ROOT; };
 		8EB156D36C57534D57A0C3C7 /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/PermissionService.swift"; sourceTree = SOURCE_ROOT; };
 		CCEC50E0969F4AB6AC97D390 /* PreviewCaptureConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/Services/PreviewCaptureConfiguration.swift"; sourceTree = SOURCE_ROOT; };
@@ -247,6 +250,8 @@
 		F50771B3DC0D16851E07DE4D /* WindowPlacementSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/UI/WindowPlacementSettingsView.swift"; sourceTree = SOURCE_ROOT; };
 		38D1FF25E426EB09B8802EB2 /* WindowPlacementSizeHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockCore/UI/WindowPlacementSizeHUDController.swift"; sourceTree = SOURCE_ROOT; };
 		A18BD2DED7E1CE111A4BEDCA /* FinderMenuExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/OmniDockFinderSync/FinderMenuExtension.swift"; sourceTree = SOURCE_ROOT; };
+		CD94AF12253F391831969DB1 /* MenuBarVisibility.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "Sources/OmniDockMenuBarRuntime/MenuBarVisibility.m"; sourceTree = SOURCE_ROOT; };
+		5C58F097BA29775B1F4584FF /* OmniDockMenuBarRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Sources/OmniDockMenuBarRuntime/include/OmniDockMenuBarRuntime.h"; sourceTree = SOURCE_ROOT; };
 		E0E27618A2D2A8FEBDD49F35 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
 		31BEFD43862C3893FFE18E56 /* OmniDock-Development.entitlements */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/OmniDock-Development.entitlements"; sourceTree = SOURCE_ROOT; };
 		921E39243A760BE16D455FDF /* OmniDock-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Resources/OmniDock-AppStore.entitlements"; sourceTree = SOURCE_ROOT; };
@@ -381,6 +386,7 @@
 				2AAFFA2BCCC66961497DCE50 /* LivePreviewCaptureSession.swift */,
 				3033C62D64E624BFF8B5B231 /* LocalizedResourceCatalog.swift */,
 				1B396AE9113FDF2E5F6BD8FB /* MenuBarShelfService.swift */,
+				BCEBA8BF3B459275A3A48166 /* MenuBarShelfVisibility.swift */,
 				10437BC999C1A1308759C9D7 /* PermissionFeatureGate.swift */,
 				8EB156D36C57534D57A0C3C7 /* PermissionService.swift */,
 				CCEC50E0969F4AB6AC97D390 /* PreviewCaptureConfiguration.swift */,
@@ -442,6 +448,7 @@
 				F50771B3DC0D16851E07DE4D /* WindowPlacementSettingsView.swift */,
 				38D1FF25E426EB09B8802EB2 /* WindowPlacementSizeHUDController.swift */,
 				A18BD2DED7E1CE111A4BEDCA /* FinderMenuExtension.swift */,
+				CD94AF12253F391831969DB1 /* MenuBarVisibility.m */,
 			);
 			name = Sources;
 			sourceTree = "<group>";
@@ -449,6 +456,7 @@
 		22D02A9EFAC9B3FBBAEBE062 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				5C58F097BA29775B1F4584FF /* OmniDockMenuBarRuntime.h */,
 				E0E27618A2D2A8FEBDD49F35 /* Assets.xcassets */,
 				31BEFD43862C3893FFE18E56 /* OmniDock-Development.entitlements */,
 				921E39243A760BE16D455FDF /* OmniDock-AppStore.entitlements */,
@@ -699,6 +707,7 @@
 				8FECE3B5E53FD8392CB4303F /* LivePreviewCaptureSession.swift in Sources */,
 				340A3DD220433F342BECFA72 /* LocalizedResourceCatalog.swift in Sources */,
 				0BA483CE02665B663606AEAB /* MenuBarShelfService.swift in Sources */,
+				3F2DEF5B2515C095308C0FED /* MenuBarShelfVisibility.swift in Sources */,
 				EBCE645D836C38D5EF7CFB4A /* PermissionFeatureGate.swift in Sources */,
 				8FBBEBF4FD11BC90225961B7 /* PermissionService.swift in Sources */,
 				3CA3D2CDF2ACB367DB6E60FF /* PreviewCaptureConfiguration.swift in Sources */,
@@ -759,6 +768,7 @@
 				94E7ED2A11D974BB6586BD9E /* WindowPlacementPaletteController.swift in Sources */,
 				532523EC4B5D2D3B25E76E33 /* WindowPlacementSettingsView.swift in Sources */,
 				1A2FA8FC769EDC4761A6A669 /* WindowPlacementSizeHUDController.swift in Sources */,
+				5DDC9F66EBE667DE445713AF /* MenuBarVisibility.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -919,6 +929,7 @@
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
 					"$(inherited)",
 				);
+				SWIFT_OBJC_BRIDGING_HEADER = "Sources/OmniDockMenuBarRuntime/include/OmniDockMenuBarRuntime.h";
 				SWIFT_VERSION = "5.0";
 			};
 			name = Debug;
@@ -949,6 +960,7 @@
 					"$(inherited)",
 					"APP_STORE",
 				);
+				SWIFT_OBJC_BRIDGING_HEADER = "Sources/OmniDockMenuBarRuntime/include/OmniDockMenuBarRuntime.h";
 				SWIFT_VERSION = "5.0";
 			};
 			name = Release;

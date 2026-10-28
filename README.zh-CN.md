@@ -62,6 +62,8 @@ https://github.com/user-attachments/assets/85807a3b-611c-4151-946e-8ae6f29318cd
 
 按住 `Command`，把不常用的图标拖到分界线后面。需要时点一下展开，用完手动收起，也可以设为 5–60 秒后自动收起。哪些图标放进去，由你决定，不会自动分类。
 
+macOS 27 及以上版本需要辅助功能权限；同一应用的多个图标会一起收纳，系统控制图标始终保留。macOS 26 及更早版本继续沿用原有的分界线方式。
+
 [了解菜单栏整理](https://omnidock.app/zh/features/menu-bar/)
 
 https://github.com/user-attachments/assets/7f29d5c2-4206-4151-9332-691f6e9a89df

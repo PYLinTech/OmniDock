@@ -174,7 +174,7 @@ preview panel.
 |---|---|---|
 | P1 | Grant Accessibility, but not Screen Recording or Input Monitoring | Dock hover offers window titles, app icons, minimized state and exact-window selection without starting capture. Enhanced Command-Tab, Option-Tab and Dock click toggling remain unavailable, with a missing-permission explanation; native Command-Tab is unchanged |
 | P2 | Also grant Input Monitoring, still without Screen Recording | Enhanced Command-Tab and Option-Tab offer the same metadata-only navigation. No cached or newly captured window image appears in any of the three entries |
-| P3 | Revoke Screen Recording with each preview open | Captures stop, late image callbacks are ignored, old images are cleared, and metadata remains available after permission reconciliation |
+| P3 | Revoke Screen Recording with each preview open | Once macOS reports the grant lost to the running process, captures stop, late image callbacks are ignored, old images are cleared, and metadata remains available after permission reconciliation |
 | P4 | Grant Screen Recording again | Image previews resume according to the saved live/static preference when the grant becomes visible to the process. Record a macOS-required restart as such |
 | P5 | Revoke a basic permission, then turn the affected feature off before granting it again | Its saved switch stays off; granting permission does not override that choice |
 | P6 | Change permissions while enhanced Command-Tab is open and Option-Tab is disabled | The inactive service does not dismiss the other entry's shared panel |
@@ -182,6 +182,10 @@ preview panel.
 P1-P6 require real permission changes, not only injected snapshots in unit
 tests. Include first-launch and upgraded settings with pending permission
 intent; upgrading should restore only the feature's own saved choice once.
+If macOS retains the existing process's grant until Quit & Reopen, the Settings
+toggle alone is not live-revocation evidence. Record the system prompt and
+restart-based result separately; do not count that as an effective in-process
+permission transition for P3 or P6.
 
 ### Menu bar shelf
 
@@ -206,6 +210,9 @@ intent; upgrading should restore only the feature's own saved choice once.
 Geometry tests with rotated rectangles and negative coordinates cover the
 retention calculation, not real Dock animation or multi-display behavior.
 H1-H7 still require pointer-based acceptance on the installed build.
+H7 concerns stopping Dock monitoring independently. The global preview master
+switch deliberately disables all three preview entries, so switching it off
+cannot establish H7's shared-panel ownership result.
 
 ### Window switcher keyboard navigation
 
@@ -1420,3 +1427,218 @@ has passed on three machines and fails on a fourth is worth being able to see.
   includes active permission revocation/shared-panel ownership, complete
   F/H/K/P/V combinations, file dragging, and three-entry repeated or overlapping
   physical display/sleep interruptions. No commit, push or release was made.
+
+### 2026-10-13 · macOS 15 update and long-list follow-up
+
+- On macOS 15.6.1, the installed `1.2.10` candidate used Settings > Check for
+  Updates to download the official `1.2.11` release, replace itself and restart
+  automatically. The installed executable matched the official host build,
+  SHA-256 `1556ffc20b73aac06e8207e28385ddea40e24d02e2b441caca66c0df731316eb`.
+  Strict nested signature validation and Gatekeeper assessment passed.
+- A 20-document Option-Tab trial reproduced a K2 defect: removing an earlier
+  window rebuilt the grid at its top, leaving the unchanged selected card
+  below the visible area. Reapply selected-card scrolling after laying out a
+  rebuilt grid. Identity, ordering, capture and focus contracts are unchanged.
+  The regression failed before the fix and covers removal, insertion and
+  geometry changes while the selected identity stays unchanged.
+- Installed the Developer ID signed arm64 correction only in the guest,
+  retaining version `1.2.11`, build `21` for local acceptance. Its executable
+  SHA-256 is `21beae9c66aaaf8bab1f12ef70dd748be7877c268c8d15366bdc1a0c0dadcdae`.
+  This is an unpublished, non-notarized candidate, not a replacement for the
+  official release. The host remains on the official executable above, and a
+  verified ZIP of the guest's official application is retained for rollback.
+- The candidate kept the same last-row selection wholly visible after an
+  earlier document closed. Returning to the first row and confirming focused
+  the exact expected AXDocument. Tab wraparound, Shift-Tab/keypad Enter and
+  Option-release confirmation also selected the expected documents. Three
+  Esc/immediate-reopen cycles left no panel or unintended foreground change.
+  Disabling Option-Tab during an active session cancelled without focusing;
+  ordinary typing and Command/Control input still worked after dismissal.
+  These are scoped K2-K6 image-preview trials, not the complete input matrix.
+- Command-Tab followed by background-application Dock hover remained usable.
+  Two sampled Dock-to-panel routes retained one panel without changing the
+  foreground application. Launchpad and a windowless application dismissed
+  the old preview; a rapid move to Launchpad did not reopen it on settling.
+  Disabling the preview master removed a Dock-owned panel. Enabling/disabling
+  inactive Option-Tab left an active Command-Tab panel intact. These cover
+  specific H3/H6/K7 and setting-change ownership paths, not file dragging,
+  guaranteed in-flight capture races or monitor-specific H7 shutdown.
+- With Command-Tab open and Option-Tab disabled, Screen Recording was toggled
+  off through System Settings. macOS explicitly stated that the current
+  process could continue recording until it quit. The retained panel/images
+  therefore do not establish effective live P3/P6 revocation. Restored the
+  grant and honored Quit & Reopen; all five permission statuses were granted
+  again. No host privacy grants or unrelated application windows were changed.
+- **867 tests passed with compiler warnings treated as errors.** Strict
+  SwiftPM and Xcode arm64 Release builds, generated-project consistency,
+  staged bundle validation and strict nested/all-architecture signature
+  checks passed. This candidate has not undergone Universal 2 or notarization
+  acceptance. Original guest preview switches and live limit `3` were
+  restored, owned fixture/settings windows closed, modifiers released and the
+  temporary transfer server stopped. Evidence is retained in the ignored
+  `.private/acceptance-20261013-vm/` directory.
+- No commit, push or release was performed. Full stale-target/relaunch focus,
+  file dragging, effective live permission changes, fullscreen/long-title/theme
+  combinations and three-entry repeated/overlapping physical display/sleep
+  acceptance remain open. Earlier targeted passes remain valid; this batch
+  does not mark the full F/H/K/P/V or interruption matrices complete.
+
+### 2026-10-27 · macOS 27.2 menu bar compatibility
+
+- Reproduced on macOS `27.2` (`26B123`), Apple silicon, with an external
+  U32J59x display and the internal display attached. The official `1.2.11`
+  installation changed its divider's reported width without hiding icons.
+  Status items are now hosted through MenuBarAgent scenes; the legacy
+  oversized-divider behavior no longer supplies the required hiding behavior.
+- On macOS 27 or later, retain a compact interactive divider and read the
+  actual menu bar layout through Accessibility on a background queue. Hide
+  confirmed hidden applications through a runtime-resolved MenuBarClientCore
+  visibility assertion, preserving OmniDock's own controls and system items.
+  An owner with an icon on both sides remains visible. Incomplete or invalid
+  layout, missing permission and unavailable runtime support leave the section
+  expanded. Older systems retain the existing length-based path.
+- The runtime API is private and may change independently of the public SDK.
+  Class/selector checks, exception handling and explicit release on expansion,
+  feature shutdown, permission refresh and process termination bound this
+  dependency. Stale layout/activation callbacks cannot re-hide an expanded
+  section. This is a direct-distribution compatibility path, not App Store
+  validation. Updated bilingual permission disclosures and feature boundaries.
+- Scope workspace resets to real application bundles, and screen resets to
+  changed display frames; helper processes and redundant screen notifications
+  must not repeatedly reopen the section. Real application membership changes
+  or wake restore an unrestricted layout before the next timed collapse.
+- Installed the final Developer ID signed arm64 candidate at
+  `/Applications/OmniDock.app`, retaining version `1.2.11`, build `21` for local
+  acceptance. Executable SHA-256:
+  `0c312beca50c8cbb6870513ead188b03d80ead00042944690fc907acf95f74b0`.
+  The designated requirement matches the previous official installation, which
+  is retained in a rollback ZIP. The pre-existing unpublished grid-selection
+  correction is included, not reverted. No version bump or release occurred.
+- Dedicated menu bar fixtures verified visible/hidden sections, three repeated
+  toggle cycles, restore-on-disable/re-enable, 10-second automatic hiding and
+  divider Settings navigation to Hidden Bar. Screenshots of the final build
+  confirm hidden application icons disappear while the divider, arrow and
+  right-side/system controls remain visible. Original preview/shelf feature
+  switches, live limit, language and appearance match their pre-test values.
+- Other local smoke checks: two owned TextEdit document thumbnails rendered;
+  Apps dismissed old preview content; repeated Dock clicks hid and restored
+  TextEdit. Enhanced Command-Tab and Option-Tab displayed panels and cancelled.
+  The clipboard shortcut opened its searchable panel. A real edge resize
+  changed an owned fixture from `640 x 452` to `766 x 540` and exposed an
+  `84 x 28` size HUD; title-bar movement exposed both display-region windows
+  without a size HUD. All five permission indicators remained granted.
+- Exact thumbnail focusing was not newly accepted: one coordinate trial was
+  inconclusive and two helper preconditions could not identify the owned
+  preview. These helper failures are not established product regressions.
+  Full Finder actions, shortcut-binding execution, live permission revocation,
+  physical hot-plug/sleep and the full earlier F/H/K/P/V matrices were not
+  accepted in this batch. A green-button hover is not a current product
+  behavior; the current implementation intercepts a click for maximize/restore.
+- **878 tests passed with compiler warnings treated as errors**, including
+  11 new selection/permission/cancellation/compatibility tests for the menu bar
+  path. Strict SwiftPM and Xcode arm64 Release builds, generated-project
+  consistency, staged-bundle verification and strict nested/all-architecture
+  signature checks passed. Build toolchain: Xcode `26.3`; this is runtime
+  acceptance on 27.2, not a build against the 27 SDK, Universal 2 validation or
+  notarization. No host privacy grants were reset or expanded.
+- Closed only the dedicated fixture applications/documents, released all
+  modifiers and retained evidence in the ignored
+  `.private/acceptance-20261027-macos27/` directory. No commit or push was made.
+
+### 2026-10-27 · RunCat and the main OmniDock menu item
+
+- The user identified RunCat and OmniDock as the two remaining visible apps.
+  RunCat exposed two status items on opposite sides of the divider. Kept the
+  conservative per-application policy and moved its visible-side item into the
+  hidden section using the normal Command-drag interaction. Both RunCat items
+  now belong to the hidden section. A preliminary Amphetamine layout trial was
+  reversed before making this change; Amphetamine remains on the visible side.
+- Keep OmniDock allowed by the native visibility assertion so its divider and
+  toggle remain usable. Identify the independent primary `OD` item and hide
+  only that item with `NSStatusItem.isVisible` when its captured position is in
+  the hidden section. Restore it on expansion, shutdown or cancelled/failed
+  activation; unknown geometry remains visible. Do not hard-code RunCat or any
+  other third-party bundle identifier into the implementation.
+- Defer timed collapse while the primary OmniDock menu is open. A physical
+  pointer click kept the menu and primary item open beyond the configured
+  10-second delay; closing the menu allowed subsequent automatic hiding.
+- Three manual collapse/expand cycles, feature-off restoration, divider Settings
+  navigation with `OD` hidden, and restart followed by automatic collapse were
+  exercised on the final local build. RunCat and `OD` disappear in settled
+  hidden-state captures and return when expanded. Some menu-bar captures omit
+  additional system/right-side scenes transiently. The user subsequently
+  confirmed on the actual screen that RunCat and `OD` are hidden while the
+  right-side icons remain normal, completing this scoped visual check.
+- **884 tests passed with compiler warnings treated as errors.** Strict SwiftPM
+  and Xcode arm64 Release builds, staged bundle validation, generated-project
+  consistency and strict nested/all-architecture signature checks passed. One
+  Finder extension registration points to `/Applications/OmniDock.app`.
+- Installed executable SHA-256:
+  `9d57b9747c914c310037147b63f791f26fbd9c9855f496a17144153321a1f450`.
+  Version remains `1.2.11`, build `21`, with the same Developer ID designated
+  requirement. This is an unpublished, non-notarized arm64 candidate. Retained
+  the previous candidate and official rollback ZIPs, restored automatic hiding
+  to 10 seconds, closed the test settings window and released test inputs.
+  Evidence: `.private/acceptance-20261027-menubar-followup/`. No commit, push,
+  release, VM update or privacy-permission change was performed.
+
+### 2026-10-27 · Collapsed divider indicator
+
+- Restore the original visual behavior: draw the divider only while expanded.
+  Keep its status item and position for layout classification; clear only the
+  title after a successful collapse. Failed activation restores the expanded
+  state and therefore its visible divider. The expansion arrow is unchanged.
+- On macOS 27.2, three manual cycles and timed collapse verified an empty divider
+  title when tucked and the vertical marker when expanded. Screenshots confirm
+  the marker disappears without restoring RunCat or `OD`; visible-side controls
+  remain in the settled hidden-state capture. Divider Settings navigation still
+  opens the Hidden Bar tab. No preference or permission changes were required.
+- **885 strict tests passed**, including the divider-state regression. Strict
+  SwiftPM and Xcode arm64 Release builds, staged bundle validation, generated
+  project consistency, ZIP integrity and installed nested signature checks
+  passed. Installed executable SHA-256:
+  `21ad82a5de7ed6b887118776c77dccfdc8fa97997d5e4222692873bdbdb21c2f`.
+  Version remains `1.2.11/21`, same Developer ID requirement. This local arm64
+  candidate is not newly notarized or released; older-system manual acceptance
+  was not repeated. Previous candidate ZIPs remain available for rollback.
+  Evidence: `.private/acceptance-20261027-menubar-followup/divider-*`.
+
+### 2026-10-28 · Older-system menu bar regression
+
+- Installed the same signed arm64 candidate on macOS `15.6.1` (`24G90`) and
+  `26.3.1` (`25D2128`). Version remains `1.2.11/21`; both installed executables
+  match the host SHA-256
+  `21ad82a5de7ed6b887118776c77dccfdc8fa97997d5e4222692873bdbdb21c2f`.
+  Retained and ZIP-verified both previous installations for rollback. This is
+  local candidate acceptance, not a new notarized release or updater test.
+- Both systems passed three collapse/expand cycles with native status-item
+  fixtures on opposite sides: the hidden-side icon disappeared, the visible-side
+  icon remained, and the divider title was empty only while collapsed. AX bounds
+  changed between a 12-point expanded divider and a 5002-point collapsed divider,
+  confirming the existing length-based path rather than the macOS 27 path.
+- Feature disable/re-enable, divider Settings navigation, 10-second automatic
+  collapse, delaying collapse while the primary menu remained open, and restart
+  with the feature enabled passed on both systems. Placement was re-established
+  for visual trials; persistence of arbitrary icon placement across feature
+  recreation was not accepted by this batch.
+- Scoped smoke passed on both systems: owned TextEdit document thumbnails,
+  repeated Dock click hide/restore, and Option-Tab/enhanced Command-Tab panel
+  display with Escape cancellation. On 26, moving to the Apps target also removed
+  the previous preview. This is not complete focus, close, drag or shortcut QA.
+- macOS 15 retained its existing five permissions. The 26 VM had stale permission
+  entries associated with its old 1.0 installation before candidate testing;
+  re-adding the current app through System Settings restored Accessibility,
+  Input Monitoring and Screen Recording. The native capture confirmation was
+  accepted, then thumbnail rendering was rechecked. Parallels test-control
+  authorization was completed only in that VM. Finder/folder access remained
+  ungranted there, and Finder actions were not tested. No host grants changed.
+- Restored all preview feature switches to their captured values and each VM's
+  original shelf state (15 enabled, 26 disabled), retaining the approved 26
+  permissions. Closed owned test windows, released modifiers, removed guest
+  staging bundles and stopped the temporary transfer server. Both VMs were
+  safely suspended. No runtime source changes, commit, push or release occurred.
+- macOS 12/13/14, Intel runtime behavior, real notched/multiple displays, sleep
+  combinations and the full earlier F/H/K/P/V matrices remain untested in this
+  batch. These passes reduce the specific regression risk; they are not a
+  guarantee for every older system. Evidence:
+  `.private/acceptance-20261027-legacy/acceptance.md`.

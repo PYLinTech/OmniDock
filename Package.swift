@@ -12,8 +12,10 @@ let package = Package(
         .executable(name: "OmniDock", targets: ["OmniDock"])
     ],
     targets: [
+        .target(name: "OmniDockMenuBarRuntime", cSettings: [.unsafeFlags(["-fobjc-arc"])]),
         .target(
             name: "OmniDockCore",
+            dependencies: ["OmniDockMenuBarRuntime"],
             resources: [
                 .process("Resources")
             ],

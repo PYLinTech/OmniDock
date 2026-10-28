@@ -78,6 +78,10 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     )
     private lazy var menuBarShelfService = MenuBarShelfService(
         settings: settings,
+        onMainItemVisibilityChanged: { [weak self] isVisible in
+            self?.statusMenuController.setMenuBarItemVisible(isVisible)
+        },
+        isMainMenuOpen: { [weak self] in self?.statusMenuController.isMenuOpen ?? false },
         onOpenSettings: { [weak self] in
             self?.statusMenuController.show(tab: .hiddenBar)
         }
@@ -244,6 +248,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func refreshAfterPermissionChange() {
+        menuBarShelfService.refreshPermissions()
         windowInventory.refreshAccessibilityTracking()
         coordinator.refreshPermissionsAndMonitors()
     }

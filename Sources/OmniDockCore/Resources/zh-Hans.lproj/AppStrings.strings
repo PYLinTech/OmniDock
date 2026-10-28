@@ -101,6 +101,8 @@
 
 "menuBarShelfEnableTitle" = "启用任务栏图标整理";
 "menuBarShelfEnableDetail" = "将不常用的菜单栏图标收纳到可展开的分界线后方。";
+"menuBarShelfModernDetail" = "macOS 27 及以上版本需要辅助功能权限。同一应用的图标会一起收纳，系统控制图标始终保留。";
+"menuBarShelfUnavailable" = "暂时无法收起图标，请检查辅助功能权限，并在菜单栏展开时重试。";
 "menuBarShelfAutoHideTitle" = "自动隐藏";
 "menuBarShelfAutoHideDetail" = "展开后经过所选时间，自动收起隐藏区域。";
 "menuBarShelfSeconds" = "%d 秒";

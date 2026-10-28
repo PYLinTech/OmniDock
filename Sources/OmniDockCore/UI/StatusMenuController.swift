@@ -2,6 +2,8 @@ import AppKit
 
 @MainActor
 public final class StatusMenuController: NSObject, NSMenuDelegate {
+    nonisolated static let mainItemIdentifier = "OmniDock.StatusMenu"
+    private(set) var isMenuOpen = false
     private let settings: SettingsStore
     private let permissionService: PermissionService
     private let coordinator: DockInteractionCoordinator
@@ -118,6 +120,7 @@ public final class StatusMenuController: NSObject, NSMenuDelegate {
         item.button?.image = nil
         item.button?.imagePosition = .noImage
         item.button?.toolTip = "OmniDock"
+        item.button?.setAccessibilityIdentifier(Self.mainItemIdentifier)
         statusItem = item
 
         let menu = NSMenu()
@@ -128,12 +131,19 @@ public final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     public func menuWillOpen(_ menu: NSMenu) {
+        isMenuOpen = true
         coordinator.suspendDockClickMonitoring()
         rebuildMenu(menu)
     }
 
     public func menuDidClose(_ menu: NSMenu) {
+        isMenuOpen = false
         coordinator.resumeDockClickMonitoring()
+    }
+
+    func setMenuBarItemVisible(_ isVisible: Bool) {
+        guard let statusItem, statusItem.isVisible != isVisible else { return }
+        statusItem.isVisible = isVisible
     }
 
     @objc private func openSettingsTab(_ sender: NSMenuItem) {

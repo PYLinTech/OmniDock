@@ -102,6 +102,8 @@ enum AppStringKey: String, CaseIterable {
 
     case menuBarShelfEnableTitle
     case menuBarShelfEnableDetail
+    case menuBarShelfModernDetail
+    case menuBarShelfUnavailable
     case menuBarShelfAutoHideTitle
     case menuBarShelfAutoHideDetail
     case menuBarShelfSeconds

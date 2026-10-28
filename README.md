@@ -62,6 +62,8 @@ https://github.com/user-attachments/assets/85807a3b-611c-4151-946e-8ae6f29318cd
 
 Hold `Command` and drag less-used icons behind the divider. Click to reveal them, then close the section yourself or let it close after 5–60 seconds. You choose the icons; OmniDock doesn't sort them automatically.
 
+On macOS 27 or later, menu bar organization requires Accessibility permission. Icons belonging to the same app hide together, while system controls stay visible. macOS 26 and earlier retain the existing divider behavior.
+
 [Menu bar details](https://omnidock.app/en/features/menu-bar/)
 
 https://github.com/user-attachments/assets/7f29d5c2-4206-4151-9332-691f6e9a89df

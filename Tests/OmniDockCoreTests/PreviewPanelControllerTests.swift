@@ -118,6 +118,45 @@ final class PreviewPanelControllerTests: XCTestCase {
         }
     }
 
+    func testWindowCycleGridRebuildKeepsTheUnchangedSelectionVisible() throws {
+        _ = NSApplication.shared
+        let priorWindows = Set(NSApp.windows.map(ObjectIdentifier.init))
+        let controller = PreviewPanelController(
+            requestWindowFocus: { _, _ in XCTFail("Refreshing must not activate a window") },
+            requestWindowClose: { _, _, _, _ in }
+        )
+        defer { controller.hide() }
+        let windows = (1...70).map { previewInfo(windowID: CGWindowID($0)) }
+        let selected = try XCTUnwrap(windows.last)
+        let resizedFirst = previewInfo(windowID: 1, frame: CGRect(x: 0, y: 0, width: 1000, height: 600))
+        let replacements = [
+            Array(windows.dropFirst()),
+            windows + [previewInfo(windowID: 71)],
+            [resizedFirst] + Array(windows.dropFirst())
+        ]
+        controller.show(target: windowCycleTarget(), windows: windows, message: nil)
+        let panel = try XCTUnwrap(NSApp.windows.first { !priorWindows.contains(ObjectIdentifier($0)) })
+
+        for replacement in replacements {
+            controller.show(target: windowCycleTarget(), windows: windows, message: nil)
+            panel.contentView?.layoutSubtreeIfNeeded()
+            controller.setSelectedWindow(selected)
+            controller.update(target: windowCycleTarget(), windows: replacement, message: nil)
+            controller.setSelectedWindow(selected)
+            panel.contentView?.layoutSubtreeIfNeeded()
+
+            let scroll = try XCTUnwrap(panel.contentView?.subviews.compactMap { $0 as? NSScrollView }.first)
+            let document = try XCTUnwrap(scroll.documentView)
+            let tile = try XCTUnwrap(allSubviews(of: document).compactMap { $0 as? PreviewThumbnailView }.first {
+                $0.info.windowID == selected.windowID
+            })
+            XCTAssertEqual(tile.layer?.borderWidth, 2)
+            XCTAssertTrue(scroll.contentView.bounds.insetBy(dx: -1, dy: -1).contains(
+                tile.convert(tile.bounds, to: document)
+            ), "The selected card must remain visible after rebuilding the grid")
+        }
+    }
+
     func testMetadataOnlyPanelFitsApplicationIdentityOnFirstPresentationAndReuse() throws {
         let info = previewInfo()
         let metadata = PreviewWindowInfo(

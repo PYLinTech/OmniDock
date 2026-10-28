@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 
 enum MenuBarShelfState: Equatable {
     case tucked
@@ -7,6 +8,10 @@ enum MenuBarShelfState: Equatable {
     var toggled: MenuBarShelfState {
         self == .tucked ? .visible : .tucked
     }
+
+    var dividerTitle: String {
+        self == .visible ? "│" : ""
+    }
 }
 
 enum MenuBarShelfLayoutPolicy {
@@ -14,8 +19,10 @@ enum MenuBarShelfLayoutPolicy {
 
     static func boundaryLength(
         for state: MenuBarShelfState,
-        widestScreen: CGFloat
+        widestScreen: CGFloat,
+        operatingSystemMajorVersion: Int
     ) -> CGFloat {
+        if operatingSystemMajorVersion >= 27 { return visibleDividerLength }
         switch state {
         case .visible:
             return visibleDividerLength
@@ -40,15 +47,14 @@ enum MenuBarShelfAutoHidePolicy {
     /// holding Command and dragging, which can easily outlast the delay - and
     /// closing the shelf mid-drag puts the icon being placed out of reach.
     ///
-    /// Read from the current input state rather than watched for: a monitor on
-    /// the keyboard would make this feature ask for accessibility, which
-    /// nothing else about it needs.
+    /// Sampling current state avoids installing another keyboard event monitor.
     static func deferAutoHide(
         isCommandHeld: Bool,
         isMouseButtonDown: Bool,
-        didItemsMove: Bool
+        didItemsMove: Bool,
+        isMenuOpen: Bool = false
     ) -> Bool {
-        isCommandHeld || isMouseButtonDown || didItemsMove
+        isCommandHeld || isMouseButtonDown || didItemsMove || isMenuOpen
     }
 }
 
@@ -56,6 +62,8 @@ enum MenuBarShelfAutoHidePolicy {
 final class MenuBarShelfService: NSObject {
     private let settings: SettingsStore
     private let onOpenSettings: () -> Void
+    private let onMainItemVisibilityChanged: (Bool) -> Void
+    private let isMainMenuOpen: () -> Bool
     private var toggleItem: NSStatusItem?
     private var boundaryItem: NSStatusItem?
     private var boundaryMenu: NSMenu?
@@ -64,12 +72,21 @@ final class MenuBarShelfService: NSObject {
     private var isRepairingArrangement = false
     private var state: MenuBarShelfState = .visible
     private var isRunning = false
+    private var isCollapsing = false
+    private var hasVisibilityRestriction = false
+    private var screenFrames: [CGRect] = []
+    private let usesVisibilityRestriction = ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+    private lazy var visibility = MenuBarShelfVisibility(onMainItemVisibilityChanged: onMainItemVisibilityChanged)
 
     init(
         settings: SettingsStore,
+        onMainItemVisibilityChanged: @escaping (Bool) -> Void = { _ in },
+        isMainMenuOpen: @escaping () -> Bool = { false },
         onOpenSettings: @escaping () -> Void = {}
     ) {
         self.settings = settings
+        self.onMainItemVisibilityChanged = onMainItemVisibilityChanged
+        self.isMainMenuOpen = isMainMenuOpen
         self.onOpenSettings = onOpenSettings
         super.init()
     }
@@ -83,12 +100,23 @@ final class MenuBarShelfService: NSObject {
             return
         }
         isRunning = true
+        screenFrames = NSScreen.screens.map(\.frame)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(settingsChanged(_:)),
             name: SettingsStore.changedNotification,
             object: settings
         )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(screenLayoutChanged(_:)),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil
+        )
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification,
+                     NSWorkspace.didWakeNotification] {
+            NSWorkspace.shared.notificationCenter.addObserver(
+                self, selector: #selector(workspaceChanged(_:)), name: name, object: nil
+            )
+        }
         refresh()
     }
 
@@ -102,19 +130,56 @@ final class MenuBarShelfService: NSObject {
             name: SettingsStore.changedNotification,
             object: settings
         )
+        NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
         removeItems()
     }
 
     @objc private func settingsChanged(_ notification: Notification) {
         let change = SettingsStore.change(in: notification)
-        guard change == .menuBarShelf || change == .language || change == .all else {
+        guard change == .menuBarShelf || change == .language || change == .all
+                || (usesVisibilityRestriction && change == .permissionState) else {
             return
+        }
+        if usesVisibilityRestriction && change == .permissionState && !AXIsProcessTrusted() {
+            revealShelf()
         }
         refresh()
     }
 
     @objc private func toggleShelf(_ sender: NSStatusBarButton) {
+        if isCollapsing {
+            revealShelf()
+            return
+        }
         state = state.toggled
+        applyState()
+    }
+
+    @objc private func screenLayoutChanged(_ notification: Notification) {
+        guard isRunning, settings.menuBarShelfEnabled else { return }
+        let frames = NSScreen.screens.map(\.frame)
+        guard frames != screenFrames else { return }
+        screenFrames = frames
+        if usesVisibilityRestriction { revealShelf() } else { applyState() }
+    }
+
+    @objc private func workspaceChanged(_ notification: Notification) {
+        guard isRunning, settings.menuBarShelfEnabled, usesVisibilityRestriction else { return }
+        if notification.name != NSWorkspace.didWakeNotification {
+            guard let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                  application.bundleURL?.pathExtension == "app",
+                  application.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+        }
+        // Re-read from an unrestricted bar after application membership or the display session changes.
+        revealShelf()
+    }
+
+    private func revealShelf() {
+        isCollapsing = false
+        hasVisibilityRestriction = false
+        visibility.restore()
+        state = .visible
         applyState()
     }
 
@@ -130,7 +195,8 @@ final class MenuBarShelfService: NSObject {
         if MenuBarShelfAutoHidePolicy.deferAutoHide(
             isCommandHeld: NSEvent.modifierFlags.contains(.command),
             isMouseButtonDown: NSEvent.pressedMouseButtons != 0,
-            didItemsMove: didItemsMove
+            didItemsMove: didItemsMove,
+            isMenuOpen: isMainMenuOpen()
         ) {
             // Start the wait over rather than shorten it: the delay is how long
             // the shelf stays open once someone has stopped, not a deadline.
@@ -143,13 +209,22 @@ final class MenuBarShelfService: NSObject {
     }
 
     private func currentItemPositions() -> [CGFloat] {
-        [toggleItem, boundaryItem].map {
-            $0?.button?.window?.frame.origin.x ?? .nan
+        [toggleItem, boundaryItem].compactMap {
+            $0?.button?.window?.frame.origin.x
         }
     }
 
     @objc func openSettings(_ sender: NSMenuItem) {
         onOpenSettings()
+    }
+
+    func refreshPermissions() {
+        guard isRunning, settings.menuBarShelfEnabled, usesVisibilityRestriction else { return }
+        if !AXIsProcessTrusted() {
+            revealShelf()
+        } else if state == .visible, !isCollapsing {
+            scheduleAutoHideIfNeeded()
+        }
     }
 
     private func refresh() {
@@ -181,8 +256,9 @@ final class MenuBarShelfService: NSObject {
         )
         boundaryItem.autosaveName = "OmniDock.MenuBarShelf.Boundary"
         if let button = boundaryItem.button {
-            button.title = "│"
+            button.title = state.dividerTitle
             button.font = .systemFont(ofSize: 14, weight: .regular)
+            button.setAccessibilityIdentifier(MenuBarShelfVisibility.boundaryIdentifier)
         }
         let boundaryMenu = makeBoundaryMenu()
         boundaryItem.menu = boundaryMenu
@@ -213,18 +289,46 @@ final class MenuBarShelfService: NSObject {
     }
 
     private func applyState() {
-        guard let boundaryItem, let button = toggleItem?.button else {
+        guard let boundaryItem, toggleItem?.button != nil else {
             return
         }
         boundaryItem.length = MenuBarShelfLayoutPolicy.boundaryLength(
             for: state,
-            widestScreen: NSScreen.screens.map(\.frame.width).max() ?? 4_096
+            widestScreen: NSScreen.screens.map(\.frame.width).max() ?? 4_096,
+            operatingSystemMajorVersion: ProcessInfo.processInfo.operatingSystemVersion.majorVersion
         )
 
-        if state == .tucked {
+        if usesVisibilityRestriction, state == .tucked {
+            guard !isCollapsing, !hasVisibilityRestriction else { return }
+            isCollapsing = true
+            autoHideTimer?.invalidate()
+            autoHideTimer = nil
+            visibility.tuck(isRightToLeft: NSApp.userInterfaceLayoutDirection == .rightToLeft) { [weak self] succeeded in
+                guard let self, self.isRunning, self.isCollapsing, self.settings.menuBarShelfEnabled else { return }
+                self.isCollapsing = false
+                self.hasVisibilityRestriction = succeeded
+                self.state = succeeded ? .tucked : .visible
+                self.updateItemAppearance()
+                if !succeeded {
+                    self.toggleItem?.button?.toolTip = AppStrings.text(.menuBarShelfUnavailable)
+                }
+            }
+            return
+        } else if usesVisibilityRestriction {
+            isCollapsing = false
+            hasVisibilityRestriction = false
+            visibility.restore()
+        } else if state == .tucked {
             verifyArrangementAfterTucking()
         }
 
+        updateItemAppearance()
+        scheduleAutoHideIfNeeded()
+    }
+
+    private func updateItemAppearance() {
+        boundaryItem?.button?.title = state.dividerTitle
+        guard let button = toggleItem?.button else { return }
         let symbolName = state == .tucked ? "chevron.left" : "chevron.right"
         let image = NSImage(
             systemSymbolName: symbolName,
@@ -233,8 +337,6 @@ final class MenuBarShelfService: NSObject {
         image?.isTemplate = true
         button.image = image
         button.toolTip = AppStrings.text(.menuBarShelfToggleTooltip)
-
-        scheduleAutoHideIfNeeded()
     }
 
     // The expanded divider pushes whatever sits beside it past the edge of the
@@ -308,6 +410,9 @@ final class MenuBarShelfService: NSObject {
     }
 
     private func removeItems() {
+        isCollapsing = false
+        hasVisibilityRestriction = false
+        if usesVisibilityRestriction { visibility.restore() }
         autoHideTimer?.invalidate()
         autoHideTimer = nil
         if let toggleItem {

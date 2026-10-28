@@ -41,24 +41,30 @@ final class MenuBarShelfTests: XCTestCase {
         XCTAssertEqual(MenuBarShelfState.tucked.toggled, .visible)
     }
 
+    func testDividerIsDrawnOnlyWhileTheShelfIsExpanded() {
+        XCTAssertEqual(MenuBarShelfState.visible.dividerTitle, "│")
+        XCTAssertEqual(MenuBarShelfState.tucked.dividerTitle, "")
+        XCTAssertEqual(MenuBarShelfState.tucked.toggled.dividerTitle, "│")
+    }
+
     func testVisibleStateKeepsDividerAtMarkerWidth() {
         XCTAssertEqual(
-            MenuBarShelfLayoutPolicy.boundaryLength(for: .visible, widestScreen: 6_016),
+            MenuBarShelfLayoutPolicy.boundaryLength(for: .visible, widestScreen: 6_016, operatingSystemMajorVersion: 26),
             MenuBarShelfLayoutPolicy.visibleDividerLength
         )
     }
 
     func testTuckedStateUsesEnoughWidthForLargeAndFutureDisplays() {
         XCTAssertEqual(
-            MenuBarShelfLayoutPolicy.boundaryLength(for: .tucked, widestScreen: 3_456),
+            MenuBarShelfLayoutPolicy.boundaryLength(for: .tucked, widestScreen: 3_456, operatingSystemMajorVersion: 26),
             10_000
         )
         XCTAssertEqual(
-            MenuBarShelfLayoutPolicy.boundaryLength(for: .tucked, widestScreen: 6_016),
+            MenuBarShelfLayoutPolicy.boundaryLength(for: .tucked, widestScreen: 6_016, operatingSystemMajorVersion: 26),
             12_032
         )
         XCTAssertEqual(
-            MenuBarShelfLayoutPolicy.boundaryLength(for: .tucked, widestScreen: 20_000),
+            MenuBarShelfLayoutPolicy.boundaryLength(for: .tucked, widestScreen: 20_000, operatingSystemMajorVersion: 26),
             32_768
         )
     }
