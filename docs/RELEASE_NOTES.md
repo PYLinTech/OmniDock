@@ -1,6 +1,6 @@
-# OmniDock 1.2.11
+# OmniDock 1.2.12
 
-- Improve window-list recovery after apps minimize and restore windows.
-- Preserve document titles and exact-window navigation without Screen Recording.
-- Clarify Input Monitoring requirements for enhanced Command-Tab previews while keeping native app switching and saved preferences intact.
-- Improve narrow preview placeholder readability.
+- Restore Hidden Bar behavior on macOS 27 with Accessibility-based layout detection while retaining the existing divider workflow on macOS 26 and earlier.
+- Keep multi-icon apps together based on their actual divider placement while preserving system controls and the shelf entry.
+- Delay automatic hiding while OmniDock's menu is open and remove the divider marker while the shelf is collapsed.
+- Keep the selected window visible when long preview grids rebuild.

@@ -1840,7 +1840,7 @@ public final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSSe
                 return
             }
             self.clipboardHistorySearchWorkItem = nil
-            DispatchQueue.global(qos: .userInitiated).async {
+            DispatchQueue.global(qos: .userInitiated).async { [self, listController] in
                 let filteredRecords = ClipboardArchiveSearch.filter(
                     snapshot.records,
                     query: query
