@@ -347,8 +347,10 @@ verify_architectures() {
   local binary="$1"
   local architectures
 
-  /usr/bin/lipo "$binary" -verify_arch arm64 x86_64 \
-    || die "binary is not Universal 2: $binary"
+  if ! /usr/bin/lipo "$binary" -verify_arch arm64 \
+    || ! /usr/bin/lipo "$binary" -verify_arch x86_64; then
+    die "binary is not Universal 2: $binary"
+  fi
   architectures="$(/usr/bin/lipo "$binary" -archs)"
   [[ " $architectures " == *" arm64 "* && " $architectures " == *" x86_64 "* ]] \
     || die "binary architectures are incomplete: $architectures"
