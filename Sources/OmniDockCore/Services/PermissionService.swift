@@ -161,10 +161,11 @@ public final class PermissionService {
                 fi
                 /bin/sleep 0.1
             done
-            /usr/bin/open "$1"
+            /usr/bin/open "$1" --args "$2"
             """,
             "omnidock-relauncher",
-            Bundle.main.bundleURL.path
+            Bundle.main.bundleURL.path,
+            ApplicationLaunchPolicy.backgroundArgument
         ]
 
         do {

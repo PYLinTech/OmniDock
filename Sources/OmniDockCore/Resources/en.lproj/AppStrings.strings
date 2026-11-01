@@ -8,6 +8,11 @@
 "launchAtLoginFailedDetail" = "macOS could not update the login item: %@";
 "launchAtLoginUnsupportedDetail" = "Launch at Login requires macOS 13 or later.";
 "launchAtLoginUnavailableDetail" = "macOS could not find OmniDock's login item.";
+"statusMenuBarIconTitle" = "Show OmniDock Menu Bar Icon";
+"statusMenuBarIconDetail" = "Show or hide OmniDock's menu bar icon. Open OmniDock again from Applications or Spotlight to access Settings when hidden.";
+"statusMenuBarIconHideTitle" = "Hide OmniDock's Menu Bar Icon?";
+"statusMenuBarIconHideDetail" = "OmniDock will keep running in the background. Open OmniDock again from Applications or Spotlight to access Settings and show the icon again.";
+"statusMenuBarIconHideConfirm" = "Hide Icon";
 
 "languageTitle" = "Language";
 "languageDetail" = "Choose OmniDock's display language.";

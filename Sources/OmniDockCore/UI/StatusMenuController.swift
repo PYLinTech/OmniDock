@@ -17,6 +17,7 @@ public final class StatusMenuController: NSObject, NSMenuDelegate {
     private let onPermissionGateRequired: (PermissionFeature) -> Void
     private let onOpenPermissionOnboarding: () -> Void
     private var statusItem: NSStatusItem?
+    private var isVisibleByShelf = true
     private var statusMenu: NSMenu?
     private var isSettingsWindowControllerLoaded = false
     private lazy var settingsWindowController = SettingsWindowController(
@@ -122,6 +123,7 @@ public final class StatusMenuController: NSObject, NSMenuDelegate {
         item.button?.toolTip = "OmniDock"
         item.button?.setAccessibilityIdentifier(Self.mainItemIdentifier)
         statusItem = item
+        refreshMenuBarItemVisibility()
 
         let menu = NSMenu()
         menu.delegate = self
@@ -142,8 +144,17 @@ public final class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     func setMenuBarItemVisible(_ isVisible: Bool) {
-        guard let statusItem, statusItem.isVisible != isVisible else { return }
-        statusItem.isVisible = isVisible
+        isVisibleByShelf = isVisible
+        refreshMenuBarItemVisibility()
+    }
+
+    var isMenuBarItemVisible: Bool {
+        settings.menuBarIconVisible && isVisibleByShelf
+    }
+
+    private func refreshMenuBarItemVisibility() {
+        guard let statusItem, statusItem.isVisible != isMenuBarItemVisible else { return }
+        statusItem.isVisible = isMenuBarItemVisible
     }
 
     @objc private func openSettingsTab(_ sender: NSMenuItem) {
@@ -166,6 +177,9 @@ public final class StatusMenuController: NSObject, NSMenuDelegate {
         let change = SettingsStore.change(in: notification)
         if change.affectsDockInteraction {
             coordinator.refreshForSettingsChange()
+        }
+        if change == .statusItem || change == .all {
+            refreshMenuBarItemVisibility()
         }
         // Menu item titles only depend on the localized tab names, so a full
         // rebuild is only needed for language changes; menuWillOpen rebuilds

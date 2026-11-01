@@ -916,7 +916,7 @@ public enum UpdateInstallerCommand {
     private static func launch(appURL: URL) -> Bool {
         ProcessResult.run(
             executableURL: URL(fileURLWithPath: "/usr/bin/open"),
-            arguments: ["-n", appURL.path]
+            arguments: ["-n", appURL.path, "--args", ApplicationLaunchPolicy.backgroundArgument]
         ).status == 0
     }
 }

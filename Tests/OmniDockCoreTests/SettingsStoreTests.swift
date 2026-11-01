@@ -22,6 +22,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(store.clipboardHistoryEnabled)
         XCTAssertEqual(store.clipboardHistoryLimit, 200)
         XCTAssertFalse(store.windowPlacementEnabled)
+        XCTAssertTrue(store.menuBarIconVisible)
         XCTAssertFalse(store.menuBarShelfEnabled)
         XCTAssertTrue(store.menuBarShelfAutoHideEnabled)
         XCTAssertEqual(store.menuBarShelfAutoHideDelay, 10)
@@ -57,6 +58,7 @@ final class SettingsStoreTests: XCTestCase {
         placementConfiguration.isEnabled = true
         placementConfiguration.commands[0].isEnabled = false
         store.windowPlacementConfiguration = placementConfiguration
+        store.menuBarIconVisible = false
         store.menuBarShelfEnabled = true
         store.menuBarShelfAutoHideEnabled = false
         store.menuBarShelfAutoHideDelay = 30
@@ -93,6 +95,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(reloaded.clipboardHistoryEnabled)
         XCTAssertEqual(reloaded.clipboardHistoryLimit, 350)
         XCTAssertTrue(reloaded.windowPlacementEnabled)
+        XCTAssertFalse(reloaded.menuBarIconVisible)
         XCTAssertTrue(reloaded.menuBarShelfEnabled)
         XCTAssertFalse(reloaded.menuBarShelfAutoHideEnabled)
         XCTAssertEqual(reloaded.menuBarShelfAutoHideDelay, 30)
@@ -220,6 +223,12 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertFalse(SettingsChange.language.affectsWindowCycle)
         XCTAssertFalse(SettingsChange.language.affectsAppHotkeys)
         XCTAssertFalse(SettingsChange.appearance.affectsDockInteraction)
+        XCTAssertFalse(SettingsChange.statusItem.affectsDockInteraction)
+        XCTAssertFalse(SettingsChange.statusItem.affectsCommandTabPreview)
+        XCTAssertFalse(SettingsChange.statusItem.affectsWindowCycle)
+        XCTAssertFalse(SettingsChange.statusItem.affectsAppHotkeys)
+        XCTAssertFalse(SettingsChange.statusItem.affectsClipboardHistory)
+        XCTAssertFalse(SettingsChange.statusItem.affectsWindowPlacement)
 
         XCTAssertTrue(SettingsChange.dockClick.affectsDockInteraction)
         XCTAssertTrue(SettingsChange.windowCycle.affectsWindowCycle)
@@ -230,6 +239,54 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(SettingsChange.windowPlacement.affectsAppHotkeys)
         XCTAssertTrue(SettingsChange.windowPlacement.affectsClipboardHistory)
         XCTAssertTrue(SettingsChange.hotkeyBindings.affectsWindowPlacement)
+    }
+
+    func testCancellingFirstIconHidePreservesThePreferenceAndPromptsAgain() {
+        let store = SettingsStore(defaults: isolatedDefaults(), livePreviewLimitProvider: { 8 })
+        var confirmations = 0
+        let result = store.setMenuBarIconVisible(false) {
+            confirmations += 1
+            return false
+        }
+        XCTAssertTrue(result)
+        XCTAssertTrue(store.menuBarIconVisible)
+        store.setMenuBarIconVisible(false) {
+            confirmations += 1
+            return false
+        }
+        XCTAssertEqual(confirmations, 2)
+    }
+
+    func testConfirmedIconHidePersistsWithoutPromptingAgainAfterRelaunch() {
+        let defaults = isolatedDefaults()
+        let store = SettingsStore(defaults: defaults, livePreviewLimitProvider: { 8 })
+        XCTAssertFalse(store.setMenuBarIconVisible(false) { true })
+
+        let reloaded = SettingsStore(defaults: defaults, livePreviewLimitProvider: { 8 })
+        XCTAssertFalse(reloaded.menuBarIconVisible)
+        XCTAssertTrue(reloaded.setMenuBarIconVisible(true) {
+            XCTFail("Showing the icon must not require confirmation")
+            return false
+        })
+        XCTAssertFalse(reloaded.setMenuBarIconVisible(false) {
+            XCTFail("The confirmed notice must survive relaunch")
+            return false
+        })
+    }
+
+    func testShowingTheIconDoesNotAcknowledgeTheHideNotice() {
+        let store = SettingsStore(defaults: isolatedDefaults(), livePreviewLimitProvider: { 8 })
+        store.setMenuBarIconVisible(true) {
+            XCTFail("An unchanged visible icon must not require confirmation")
+            return false
+        }
+        var prompted = false
+        store.setMenuBarIconVisible(false) {
+            prompted = true
+            return false
+        }
+        XCTAssertTrue(prompted)
+        XCTAssertTrue(store.menuBarIconVisible)
     }
 
     private func isolatedDefaults() -> UserDefaults {

@@ -14,6 +14,7 @@ public enum SettingsChange: String, Equatable {
     case clipboardHistory
     case windowPlacement
     case menuBarShelf
+    case statusItem
     case language
     case appearance
     case permissionState
@@ -27,7 +28,7 @@ public enum SettingsChange: String, Equatable {
             return true
         case .commandTabPreview, .windowCycle, .finderExtension, .minimizeDockClick,
              .hotkeys, .hotkeyBindings, .clipboardHistory, .windowPlacement, .menuBarShelf,
-             .language, .appearance,
+             .statusItem, .language, .appearance,
              .permissionState:
             return false
         }
@@ -39,7 +40,7 @@ public enum SettingsChange: String, Equatable {
             return true
         case .windowCycle, .finderExtension, .livePreview, .livePreviewLimit, .dockClick,
              .minimizeDockClick, .hotkeys, .hotkeyBindings, .clipboardHistory, .windowPlacement,
-             .menuBarShelf, .language,
+             .menuBarShelf, .statusItem, .language,
              .appearance, .permissionState:
             return false
         }
@@ -51,7 +52,7 @@ public enum SettingsChange: String, Equatable {
             return true
         case .commandTabPreview, .finderExtension, .livePreview, .livePreviewLimit, .dockClick,
              .minimizeDockClick, .hotkeys, .hotkeyBindings, .clipboardHistory, .windowPlacement,
-             .menuBarShelf, .language,
+             .menuBarShelf, .statusItem, .language,
              .appearance, .permissionState:
             return false
         }
@@ -62,7 +63,7 @@ public enum SettingsChange: String, Equatable {
         case .windowCycle, .hotkeys, .hotkeyBindings, .clipboardHistory, .windowPlacement, .all:
             return true
         case .preview, .commandTabPreview, .finderExtension, .livePreview,
-             .livePreviewLimit, .dockClick, .minimizeDockClick, .menuBarShelf, .language,
+             .livePreviewLimit, .dockClick, .minimizeDockClick, .menuBarShelf, .statusItem, .language,
              .appearance, .permissionState:
             return false
         }
@@ -74,7 +75,7 @@ public enum SettingsChange: String, Equatable {
             return true
         case .preview, .commandTabPreview, .windowCycle, .finderExtension, .livePreview,
              .livePreviewLimit, .dockClick, .minimizeDockClick, .hotkeys, .hotkeyBindings,
-             .menuBarShelf, .language, .appearance, .permissionState:
+             .menuBarShelf, .statusItem, .language, .appearance, .permissionState:
             return false
         }
     }
@@ -119,6 +120,8 @@ public final class SettingsStore {
         case menuBarShelfEnabled = "menuBarShelfEnabled"
         case menuBarShelfAutoHideEnabled = "menuBarShelfAutoHideEnabled"
         case menuBarShelfAutoHideDelay = "menuBarShelfAutoHideDelay"
+        case menuBarIconVisible = "menuBarIconVisible"
+        case menuBarIconHideNoticeAcknowledged = "menuBarIconHideNoticeAcknowledged"
         case minimizeOnRepeatedDockClick = "minimizeOnRepeatedDockClick"
         case appLanguage = "appLanguage"
         case appAppearance = "appAppearance"
@@ -212,6 +215,7 @@ public final class SettingsStore {
             Key.menuBarShelfEnabled.rawValue: false,
             Key.menuBarShelfAutoHideEnabled.rawValue: true,
             Key.menuBarShelfAutoHideDelay.rawValue: 10,
+            Key.menuBarIconVisible.rawValue: true,
             Key.appLanguage.rawValue: AppLanguage.system.rawValue,
             Key.appAppearance.rawValue: AppAppearance.system.rawValue,
             Key.permissionOnboardingCompleted.rawValue: false,
@@ -513,6 +517,22 @@ public final class SettingsStore {
         }
     }
 
+    public var menuBarIconVisible: Bool {
+        get { defaults.object(forKey: Key.menuBarIconVisible.rawValue) as? Bool ?? true }
+        set { set(newValue, for: .menuBarIconVisible) }
+    }
+
+    @discardableResult
+    func setMenuBarIconVisible(_ isVisible: Bool, confirmHiding: () -> Bool) -> Bool {
+        if !isVisible, menuBarIconVisible,
+           !defaults.bool(forKey: Key.menuBarIconHideNoticeAcknowledged.rawValue) {
+            guard confirmHiding() else { return menuBarIconVisible }
+            defaults.set(true, forKey: Key.menuBarIconHideNoticeAcknowledged.rawValue)
+        }
+        menuBarIconVisible = isVisible
+        return menuBarIconVisible
+    }
+
     public var menuBarShelfEnabled: Bool {
         get { defaults.bool(forKey: Key.menuBarShelfEnabled.rawValue) }
         set { set(newValue, for: .menuBarShelfEnabled) }
@@ -796,6 +816,8 @@ public final class SettingsStore {
             return .windowPlacement
         case .menuBarShelfEnabled, .menuBarShelfAutoHideEnabled, .menuBarShelfAutoHideDelay:
             return .menuBarShelf
+        case .menuBarIconVisible, .menuBarIconHideNoticeAcknowledged:
+            return .statusItem
         case .appLanguage:
             return .language
         case .appAppearance:

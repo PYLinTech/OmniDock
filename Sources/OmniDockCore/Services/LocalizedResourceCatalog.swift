@@ -11,6 +11,11 @@ enum AppStringKey: String, CaseIterable {
     case launchAtLoginFailedDetail
     case launchAtLoginUnsupportedDetail
     case launchAtLoginUnavailableDetail
+    case statusMenuBarIconTitle
+    case statusMenuBarIconDetail
+    case statusMenuBarIconHideTitle
+    case statusMenuBarIconHideDetail
+    case statusMenuBarIconHideConfirm
     case languageTitle
     case languageDetail
     case languageSystem

@@ -1,4 +1,14 @@
 import AppKit
+import Carbon
+
+enum ApplicationLaunchPolicy {
+    static let backgroundArgument = "--omnidock-background-launch"
+
+    static func isAutomaticLaunch(event: NSAppleEventDescriptor?, arguments: [String] = []) -> Bool {
+        arguments.contains(backgroundArgument)
+            || event?.paramDescriptor(forKeyword: keyAEPropData)?.enumCodeValue == keyAELaunchedAsLogInItem
+    }
+}
 
 enum ApplicationPresentationSurface: Hashable {
     case settings
@@ -20,6 +30,8 @@ final class ApplicationPresentationCoordinator {
     private var activeSurfaces: Set<ApplicationPresentationSurface> = []
     private var transitionGeneration = 0
     private var isRegularPresentationRequested = false
+    private var hasFinishedLaunching = false
+    private var pendingSettingsRequest: DeferredAction?
 
     init(
         setActivationPolicy: @escaping ActivationPolicySetter = { NSApp.setActivationPolicy($0) },
@@ -35,6 +47,31 @@ final class ApplicationPresentationCoordinator {
         self.setActivationPolicy = setActivationPolicy
         self.activateApplication = activateApplication
         self.scheduleDeferred = scheduleDeferred
+    }
+
+    func finishLaunching() {
+        hasFinishedLaunching = true
+        if let action = pendingSettingsRequest {
+            pendingSettingsRequest = nil
+            requestSettings(action)
+        }
+    }
+
+    func requestSettings(_ action: @escaping DeferredAction) {
+        transitionGeneration &+= 1
+        guard hasFinishedLaunching else {
+            pendingSettingsRequest = action
+            return
+        }
+
+        scheduleDeferred { [weak self] in
+            guard let self else { return }
+            if self.isPresenting(.permissionOnboarding) || self.isPresenting(.update) {
+                self.activateApplication()
+            } else {
+                action()
+            }
+        }
     }
 
     func present(_ surface: ApplicationPresentationSurface) {

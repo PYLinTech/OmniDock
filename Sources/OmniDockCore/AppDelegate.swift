@@ -157,6 +157,36 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         showPermissionOnboardingIfNeeded()
         applicationUpdateService.start()
         schedulePermissionRecheckAfterLaunch()
+        presentationCoordinator.finishLaunching()
+    }
+
+    public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        // Process launch arguments must not suppress later, explicit reopen events.
+        guard !ApplicationLaunchPolicy.isAutomaticLaunch(event: NSAppleEventManager.shared().currentAppleEvent) else {
+            return false
+        }
+        if flag && presentationCoordinator.activeSurfaceCount > 0 {
+            return true
+        }
+        requestSettingsForReopen()
+        return false
+    }
+
+    public func applicationShouldOpenUntitledFile(_ sender: NSApplication) -> Bool {
+        if !settings.menuBarIconVisible,
+           !ApplicationLaunchPolicy.isAutomaticLaunch(
+               event: NSAppleEventManager.shared().currentAppleEvent,
+               arguments: CommandLine.arguments
+           ) {
+            requestSettingsForReopen()
+        }
+        return false
+    }
+
+    private func requestSettingsForReopen() {
+        presentationCoordinator.requestSettings { [weak self] in
+            self?.statusMenuController.show(tab: .settings)
+        }
     }
 
     public func applicationDidBecomeActive(_ notification: Notification) {
